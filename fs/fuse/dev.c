@@ -20,6 +20,7 @@
 #include <linux/pipe_fs_i.h>
 #include <linux/swap.h>
 #include <linux/splice.h>
+#include <linux/sched.h>
 #include <linux/freezer.h>
 
 MODULE_ALIAS_MISCDEV(FUSE_MINOR);
@@ -172,7 +173,7 @@ static struct fuse_req *__fuse_get_req(struct fuse_conn *fc, unsigned npages,
 
 	req->in.h.uid = from_kuid(fc->user_ns, current_fsuid());
 	req->in.h.gid = from_kgid(fc->user_ns, current_fsgid());
-	req->in.h.pid = current->pid;
+	req->in.h.pid = pid_nr_ns(task_pid(current), fc->pid_ns);
 
 	__set_bit(FR_WAITING, &req->flags);
 	if (for_background)
@@ -273,7 +274,7 @@ struct fuse_req *fuse_get_req_nofail_nopages(struct fuse_conn *fc,
 
 	req->in.h.uid = from_kuid_munged(fc->user_ns, current_fsuid());
 	req->in.h.gid = from_kgid_munged(fc->user_ns, current_fsgid());
-	req->in.h.pid = current->pid;
+	req->in.h.pid = pid_nr_ns(task_pid(current), fc->pid_ns);
 
 	__set_bit(FR_WAITING, &req->flags);
 	__clear_bit(FR_BACKGROUND, &req->flags);
@@ -1257,6 +1258,9 @@ static ssize_t fuse_dev_do_read(struct fuse_dev *fud, struct file *file,
 	struct fuse_in *in;
 	unsigned reqsize;
 
+	if (task_active_pid_ns(current) != fc->pid_ns)
+		return -EIO;
+
  restart:
 	spin_lock(&fiq->waitq.lock);
 	err = -EAGAIN;
@@ -1897,6 +1901,9 @@ static ssize_t fuse_dev_do_write(struct fuse_dev *fud,
 	struct fuse_pqueue *fpq = &fud->pq;
 	struct fuse_req *req;
 	struct fuse_out_header oh;
+
+	if (task_active_pid_ns(current) != fc->pid_ns)
+		return -EIO;
 
 	if (nbytes < sizeof(struct fuse_out_header))
 		return -EINVAL;

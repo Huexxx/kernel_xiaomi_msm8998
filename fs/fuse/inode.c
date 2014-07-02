@@ -21,6 +21,7 @@
 #include <linux/sched.h>
 #include <linux/exportfs.h>
 #include <linux/posix_acl.h>
+#include <linux/pid_namespace.h>
 
 MODULE_AUTHOR("Miklos Szeredi <miklos@szeredi.hu>");
 MODULE_DESCRIPTION("Filesystem in Userspace");
@@ -626,6 +627,7 @@ void fuse_conn_init(struct fuse_conn *fc, struct user_namespace *user_ns)
 	fc->connected = 1;
 	fc->attr_version = 1;
 	get_random_bytes(&fc->scramble_key, sizeof(fc->scramble_key));
+	fc->pid_ns = get_pid_ns(task_active_pid_ns(current));
 	fc->user_ns = get_user_ns(user_ns);
 }
 EXPORT_SYMBOL_GPL(fuse_conn_init);
@@ -635,6 +637,7 @@ void fuse_conn_put(struct fuse_conn *fc)
 	if (refcount_dec_and_test(&fc->count)) {
 		if (fc->destroy_req)
 			fuse_request_free(fc->destroy_req);
+		put_pid_ns(fc->pid_ns);
 		put_user_ns(fc->user_ns);
 		fc->release(fc);
 	}
