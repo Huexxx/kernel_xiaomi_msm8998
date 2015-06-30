@@ -102,6 +102,9 @@
  *  - add ctime and ctimensec to fuse_setattr_in
  *  - add FUSE_RENAME2 request
  *  - add FUSE_NO_OPEN_SUPPORT flag
+ *
+ *  7.24
+ *  - add FUSE_LSEEK for SEEK_HOLE and SEEK_DATA support
  */
 
 #ifndef _LINUX_FUSE_H
@@ -137,7 +140,7 @@
 #define FUSE_KERNEL_VERSION 7
 
 /** Minor version number of this interface */
-#define FUSE_KERNEL_MINOR_VERSION 23
+#define FUSE_KERNEL_MINOR_VERSION 24
 
 /** The node ID of the root inode */
 #define FUSE_ROOT_ID 1
@@ -361,6 +364,7 @@ enum fuse_opcode {
 	FUSE_FALLOCATE     = 43,
 	FUSE_READDIRPLUS   = 44,
 	FUSE_RENAME2       = 45,
+	FUSE_LSEEK         = 46,
 	FUSE_CANONICAL_PATH= 2016,
 
 	/* CUSE specific operations */
@@ -765,5 +769,16 @@ struct fuse_notify_retrieve_in {
 /* 127 is reserved for the V1 interface implementation in Android (deprecated) */
 /* 126 is reserved for the V2 interface implementation in Android */
 #define FUSE_DEV_IOC_PASSTHROUGH_OPEN	_IOW(FUSE_DEV_IOC_MAGIC, 126, __u32)
+
+struct fuse_lseek_in {
+	uint64_t	fh;
+	uint64_t	offset;
+	uint32_t	whence;
+	uint32_t	padding;
+};
+
+struct fuse_lseek_out {
+	uint64_t	offset;
+};
 
 #endif /* _LINUX_FUSE_H */
