@@ -309,10 +309,14 @@ static int configfs_getlink(struct dentry *dentry, char * path)
 
 }
 
-static const char *configfs_follow_link(struct dentry *dentry, void **cookie)
+static const char *configfs_get_link(struct dentry *dentry,
+				     struct inode *inode, void **cookie)
 {
 	char *page;
 	int error;
+
+	if (!dentry)
+		return ERR_PTR(-ECHILD);
 
 	page = kzalloc(PAGE_SIZE, GFP_KERNEL);
 	if (!page)
@@ -328,7 +332,7 @@ static const char *configfs_follow_link(struct dentry *dentry, void **cookie)
 }
 
 const struct inode_operations configfs_symlink_inode_operations = {
-	.follow_link = configfs_follow_link,
+	.get_link = configfs_get_link,
 	.readlink = generic_readlink,
 	.put_link = kfree_put_link,
 	.setattr = configfs_setattr,
