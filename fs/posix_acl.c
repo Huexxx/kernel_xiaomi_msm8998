@@ -804,8 +804,6 @@ posix_acl_xattr_get(const struct xattr_handler *handler,
 	struct posix_acl *acl;
 	int error;
 
-	if (strcmp(name, "") != 0)
-		return -EINVAL;
 	if (!IS_POSIXACL(d_backing_inode(dentry)))
 		return -EOPNOTSUPP;
 	if (d_is_symlink(dentry))
@@ -854,9 +852,6 @@ posix_acl_xattr_set(const struct xattr_handler *handler,
 	struct posix_acl *acl = NULL;
 	int ret;
 
-	if (strcmp(name, "") != 0)
-		return -EINVAL;
-
 	if (value) {
 		acl = posix_acl_from_xattr(&init_user_ns, value, size);
 		if (IS_ERR(acl))
@@ -872,7 +867,7 @@ posix_acl_xattr_list(const struct xattr_handler *handler,
 		     struct dentry *dentry, char *list, size_t list_size,
 		     const char *name, size_t name_len)
 {
-	const char *xname = handler->prefix;
+	const char *xname = handler->name;
 	size_t size;
 
 	if (!IS_POSIXACL(d_backing_inode(dentry)))
@@ -885,7 +880,7 @@ posix_acl_xattr_list(const struct xattr_handler *handler,
 }
 
 const struct xattr_handler posix_acl_access_xattr_handler = {
-	.prefix = XATTR_NAME_POSIX_ACL_ACCESS,
+	.name = XATTR_NAME_POSIX_ACL_ACCESS,
 	.flags = ACL_TYPE_ACCESS,
 	.list = posix_acl_xattr_list,
 	.get = posix_acl_xattr_get,
@@ -894,7 +889,7 @@ const struct xattr_handler posix_acl_access_xattr_handler = {
 EXPORT_SYMBOL_GPL(posix_acl_access_xattr_handler);
 
 const struct xattr_handler posix_acl_default_xattr_handler = {
-	.prefix = XATTR_NAME_POSIX_ACL_DEFAULT,
+	.name = XATTR_NAME_POSIX_ACL_DEFAULT,
 	.flags = ACL_TYPE_DEFAULT,
 	.list = posix_acl_xattr_list,
 	.get = posix_acl_xattr_get,
