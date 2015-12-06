@@ -352,7 +352,7 @@ static void memcpy_from_page(char *to, struct page *page, size_t offset, size_t 
 	kunmap_atomic(from);
 }
 
-static void memcpy_to_page(struct page *page, size_t offset, char *from, size_t len)
+static void memcpy_to_page(struct page *page, size_t offset, const char *from, size_t len)
 {
 	char *to = kmap_atomic(page);
 	memcpy(to + offset, from, len);
@@ -366,9 +366,9 @@ static void memzero_page(struct page *page, size_t offset, size_t len)
 	kunmap_atomic(addr);
 }
 
-size_t copy_to_iter(void *addr, size_t bytes, struct iov_iter *i)
+size_t copy_to_iter(const void *addr, size_t bytes, struct iov_iter *i)
 {
-	char *from = addr;
+	const char *from = addr;
 	iterate_and_advance(i, bytes, v,
 		__copy_to_user(v.iov_base, (from += v.iov_len) - v.iov_len,
 			       v.iov_len),
@@ -657,10 +657,10 @@ size_t csum_and_copy_from_iter(void *addr, size_t bytes, __wsum *csum,
 }
 EXPORT_SYMBOL(csum_and_copy_from_iter);
 
-size_t csum_and_copy_to_iter(void *addr, size_t bytes, __wsum *csum,
+size_t csum_and_copy_to_iter(const void *addr, size_t bytes, __wsum *csum,
 			     struct iov_iter *i)
 {
-	char *from = addr;
+	const char *from = addr;
 	__wsum sum, next;
 	size_t off = 0;
 	sum = *csum;
