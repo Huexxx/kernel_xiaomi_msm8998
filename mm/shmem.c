@@ -2525,8 +2525,15 @@ static int shmem_symlink(struct inode *dir, struct dentry *dentry, const char *s
 	return 0;
 }
 
+static void shmem_put_link(void *arg)
+{
+	mark_page_accessed(arg);
+	put_page(arg);
+}
+
 static const char *shmem_get_link(struct dentry *dentry,
-				  struct inode *inode, void **cookie)
+				  struct inode *inode,
+				  struct delayed_call *done)
 {
 	struct page *page = NULL;
 	int error;
@@ -2544,15 +2551,8 @@ static const char *shmem_get_link(struct dentry *dentry,
 			return ERR_PTR(error);
 		unlock_page(page);
 	}
-	*cookie = page;
+	set_delayed_call(done, shmem_put_link, page);
 	return page_address(page);
-}
-
-static void shmem_put_link(struct inode *unused, void *cookie)
-{
-	struct page *page = cookie;
-	mark_page_accessed(page);
-	put_page(page);
 }
 
 #ifdef CONFIG_TMPFS_XATTR
@@ -2709,7 +2709,6 @@ static const struct inode_operations shmem_short_symlink_operations = {
 static const struct inode_operations shmem_symlink_inode_operations = {
 	.readlink	= generic_readlink,
 	.get_link	= shmem_get_link,
-	.put_link	= shmem_put_link,
 #ifdef CONFIG_TMPFS_XATTR
 	.setxattr	= shmem_setxattr,
 	.getxattr	= shmem_getxattr,

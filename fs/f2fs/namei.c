@@ -546,12 +546,14 @@ fail:
 }
 
 static const char *f2fs_get_link(struct dentry *dentry,
-				 struct inode *inode, void **cookie)
+				 struct inode *inode,
+				 struct delayed_call *done)
 {
-	const char *link = page_get_link(dentry, inode, cookie);
+	const char *link = page_get_link(dentry, inode, done);
 	if (!IS_ERR(link) && !*link) {
 		/* this is broken symlink case */
-		page_put_link(NULL, *cookie);
+		do_delayed_call(done);
+		clear_delayed_call(done);
 		link = ERR_PTR(-ENOENT);
 	}
 	return link;
@@ -1202,7 +1204,8 @@ static int f2fs_rename2(struct inode *old_dir, struct dentry *old_dentry,
 }
 
 static const char *f2fs_encrypted_get_link(struct dentry *dentry,
-					   struct inode *inode, void **cookie)
+					   struct inode *inode,
+					   struct delayed_call *done)
 {
 	struct page *page;
 	void *target;
@@ -1217,13 +1220,13 @@ static const char *f2fs_encrypted_get_link(struct dentry *dentry,
 	target = fscrypt_get_symlink(inode, page_address(page),
 				     inode->i_sb->s_blocksize);
 	put_page(page);
-	return *cookie = target;
+	set_delayed_call(done, kfree_link, target);
+	return target;
 }
 
 const struct inode_operations f2fs_encrypted_symlink_inode_operations = {
 	.readlink       = generic_readlink,
 	.get_link       = f2fs_encrypted_get_link,
-	.put_link	= kfree_put_link,
 	.getattr	= f2fs_getattr,
 	.setattr	= f2fs_setattr,
 #ifdef CONFIG_F2FS_FS_XATTR
@@ -1261,7 +1264,6 @@ const struct inode_operations f2fs_dir_inode_operations = {
 const struct inode_operations f2fs_symlink_inode_operations = {
 	.readlink       = generic_readlink,
 	.get_link       = f2fs_get_link,
-	.put_link       = page_put_link,
 	.getattr	= f2fs_getattr,
 	.setattr	= f2fs_setattr,
 #ifdef CONFIG_F2FS_FS_XATTR
