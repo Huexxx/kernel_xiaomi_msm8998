@@ -1431,7 +1431,7 @@ static const char *fuse_follow_link(struct dentry *dentry, void **cookie)
 	char *link;
 	ssize_t ret;
 
-	link = (char *) __get_free_page(GFP_KERNEL);
+	link = kmalloc(PAGE_SIZE, GFP_KERNEL);
 	if (!link)
 		return ERR_PTR(-ENOMEM);
 
@@ -1443,7 +1443,7 @@ static const char *fuse_follow_link(struct dentry *dentry, void **cookie)
 	args.out.args[0].value = link;
 	ret = fuse_simple_request(fc, &args);
 	if (ret < 0) {
-		free_page((unsigned long) link);
+		kfree(link);
 		link = ERR_PTR(ret);
 	} else {
 		link[ret] = '\0';
@@ -2045,7 +2045,7 @@ static const struct inode_operations fuse_common_inode_operations = {
 static const struct inode_operations fuse_symlink_inode_operations = {
 	.setattr	= fuse_setattr,
 	.follow_link	= fuse_follow_link,
-	.put_link	= free_page_put_link,
+	.put_link	= kfree_put_link,
 	.readlink	= generic_readlink,
 	.getattr	= fuse_getattr,
 	.setxattr	= fuse_setxattr,
