@@ -2493,6 +2493,7 @@ static int shmem_symlink(struct inode *dir, struct dentry *dentry, const char *s
 		}
 		inode->i_op = &shmem_short_symlink_operations;
 	} else {
+		inode_nohighmem(inode);
 		error = shmem_getpage(inode, 0, &page, SGP_WRITE);
 		if (error) {
 			iput(inode);
@@ -2500,7 +2501,6 @@ static int shmem_symlink(struct inode *dir, struct dentry *dentry, const char *s
 		}
 		inode->i_mapping->a_ops = &shmem_aops;
 		inode->i_op = &shmem_symlink_inode_operations;
-		inode_nohighmem(inode);
 		memcpy(page_address(page), symname, len);
 		SetPageUptodate(page);
 		set_page_dirty(page);
