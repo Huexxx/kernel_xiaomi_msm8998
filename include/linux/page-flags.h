@@ -182,7 +182,7 @@ static __always_inline int PageCompound(struct page *page)
 #define PF_NO_TAIL(page, enforce) ({					\
 		VM_BUG_ON_PGFLAGS(enforce && PageTail(page), page);	\
 		compound_head(page);})
-#define PF_NO_COMPOUND(page, enforce) ({					\
+#define PF_NO_COMPOUND(page, enforce) ({				\
 		VM_BUG_ON_PGFLAGS(enforce && PageCompound(page), page);	\
 		page;})
 
@@ -400,6 +400,7 @@ static __always_inline int PageMappingFlags(struct page *page)
 
 static __always_inline int PageAnon(struct page *page)
 {
+	page = compound_head(page);
 	return ((unsigned long)page->mapping & PAGE_MAPPING_ANON) != 0;
 }
 
@@ -418,6 +419,7 @@ static __always_inline int __PageMovable(struct page *page)
  */
 static __always_inline int PageKsm(struct page *page)
 {
+	page = compound_head(page);
 	return ((unsigned long)page->mapping & PAGE_MAPPING_FLAGS) ==
 				PAGE_MAPPING_KSM;
 }
