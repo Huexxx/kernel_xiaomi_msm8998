@@ -2275,7 +2275,7 @@ out:
 		 * If the cgroup's already been deleted, make sure to
 		 * scrape out the remaining cache.
 		 */
-		if (!scan && !mem_cgroup_lruvec_online(lruvec))
+		if (!scan && !mem_cgroup_online(memcg))
 			scan = min(size, SWAP_CLUSTER_MAX);
 
 		switch (scan_balance) {
