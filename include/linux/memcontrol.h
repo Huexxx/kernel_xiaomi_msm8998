@@ -196,9 +196,6 @@ struct mem_cgroup {
 	/* vmpressure notifications */
 	struct vmpressure vmpressure;
 
-	/* css_online() has been completed */
-	int initialized;
-
 	/*
 	 * Should the accounting and control be hierarchical, per subtree?
 	 */
