@@ -273,7 +273,7 @@ static int mknod_ptmx(struct super_block *sb)
 	kuid_t ptmx_uid = current_fsuid();
 	kgid_t ptmx_gid = current_fsgid();
 
-	mutex_lock(&d_inode(root)->i_mutex);
+	inode_lock(d_inode(root));
 
 	/* If we have already created ptmx node, return */
 	if (fsi->ptmx_dentry) {
@@ -310,7 +310,7 @@ static int mknod_ptmx(struct super_block *sb)
 	fsi->ptmx_dentry = dentry;
 	rc = 0;
 out:
-	mutex_unlock(&d_inode(root)->i_mutex);
+	inode_unlock(d_inode(root));
 	return rc;
 }
 

@@ -707,9 +707,9 @@ int dquot_quota_sync(struct super_block *sb, int type)
 			continue;
 		if (!sb_has_quota_active(sb, cnt))
 			continue;
-		mutex_lock(&dqopt->files[cnt]->i_mutex);
+		inode_lock(dqopt->files[cnt]);
 		truncate_inode_pages(&dqopt->files[cnt]->i_data, 0);
-		mutex_unlock(&dqopt->files[cnt]->i_mutex);
+		inode_unlock(dqopt->files[cnt]);
 	}
 
 	return 0;

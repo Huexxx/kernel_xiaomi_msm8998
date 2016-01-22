@@ -121,7 +121,7 @@ static ssize_t udf_file_write_iter(struct kiocb *iocb, struct iov_iter *from)
 	struct udf_inode_info *iinfo = UDF_I(inode);
 	int err;
 
-	mutex_lock(&inode->i_mutex);
+	inode_lock(inode);
 
 	retval = generic_write_checks(iocb, from);
 	if (retval <= 0)
@@ -133,7 +133,7 @@ static ssize_t udf_file_write_iter(struct kiocb *iocb, struct iov_iter *from)
 				 iocb->ki_pos + iov_iter_count(from))) {
 		err = udf_expand_file_adinicb(inode);
 		if (err) {
-			mutex_unlock(&inode->i_mutex);
+			inode_unlock(inode);
 			udf_debug("udf_expand_adinicb: err=%d\n", err);
 			return err;
 		}
@@ -146,7 +146,7 @@ out:
 	if (iinfo->i_alloc_type == ICBTAG_FLAG_AD_IN_ICB && retval > 0)
 		iinfo->i_lenAlloc = inode->i_size;
 	up_write(&iinfo->i_data_sem);
-	mutex_unlock(&inode->i_mutex);
+	inode_unlock(inode);
 
 	if (retval > 0) {
 		mark_inode_dirty(inode);
@@ -218,12 +218,12 @@ static int udf_release_file(struct inode *inode, struct file *filp)
 		 * Grab i_mutex to avoid races with writes changing i_size
 		 * while we are running.
 		 */
-		mutex_lock(&inode->i_mutex);
+		inode_lock(inode);
 		down_write(&UDF_I(inode)->i_data_sem);
 		udf_discard_prealloc(inode);
 		udf_truncate_tail_extent(inode);
 		up_write(&UDF_I(inode)->i_data_sem);
-		mutex_unlock(&inode->i_mutex);
+		inode_unlock(inode);
 	}
 	return 0;
 }
