@@ -2325,7 +2325,7 @@ int cifs_strict_fsync(struct file *file, loff_t start, loff_t end,
 	rc = filemap_write_and_wait_range(inode->i_mapping, start, end);
 	if (rc)
 		return rc;
-	mutex_lock(&inode->i_mutex);
+	inode_lock(inode);
 
 	xid = get_xid();
 
@@ -2350,7 +2350,7 @@ int cifs_strict_fsync(struct file *file, loff_t start, loff_t end,
 	}
 
 	free_xid(xid);
-	mutex_unlock(&inode->i_mutex);
+	inode_unlock(inode);
 	return rc;
 }
 
@@ -2367,7 +2367,7 @@ int cifs_fsync(struct file *file, loff_t start, loff_t end, int datasync)
 	rc = filemap_write_and_wait_range(inode->i_mapping, start, end);
 	if (rc)
 		return rc;
-	mutex_lock(&inode->i_mutex);
+	inode_lock(inode);
 
 	xid = get_xid();
 
@@ -2384,7 +2384,7 @@ int cifs_fsync(struct file *file, loff_t start, loff_t end, int datasync)
 	}
 
 	free_xid(xid);
-	mutex_unlock(&inode->i_mutex);
+	inode_unlock(inode);
 	return rc;
 }
 
@@ -2724,7 +2724,7 @@ cifs_writev(struct kiocb *iocb, struct iov_iter *from)
 	 * with a brlock that prevents writing.
 	 */
 	down_read(&cinode->lock_sem);
-	mutex_lock(&inode->i_mutex);
+	inode_lock(inode);
 
 	rc = generic_write_checks(iocb, from);
 	if (rc <= 0)
@@ -2737,7 +2737,7 @@ cifs_writev(struct kiocb *iocb, struct iov_iter *from)
 	else
 		rc = -EACCES;
 out:
-	mutex_unlock(&inode->i_mutex);
+	inode_unlock(inode);
 
 	if (rc > 0)
 		rc = generic_write_sync(iocb, rc);
