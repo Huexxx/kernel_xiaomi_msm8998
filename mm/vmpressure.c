@@ -281,9 +281,8 @@ static void vmpressure_memcg(gfp_t gfp, struct mem_cgroup *memcg, bool critical,
 
 	if (tree) {
 		spin_lock_irqsave(&vmpr->sr_lock, flags);
-		vmpr->tree_scanned += scanned;
+		scanned = vmpr->tree_scanned += scanned;
 		vmpr->tree_reclaimed += reclaimed;
-		scanned = vmpr->scanned;
 		spin_unlock_irqrestore(&vmpr->sr_lock, flags);
 
 		if (!critical && scanned < calculate_vmpressure_win())
