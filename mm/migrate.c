@@ -421,8 +421,6 @@ int migrate_page_move_mapping(struct address_space *mapping,
 		if (PageSwapBacked(page))
 			SetPageSwapBacked(newpage);
 
-		mem_cgroup_migrate(page, newpage);
-
 		return MIGRATEPAGE_SUCCESS;
 	}
 
@@ -518,8 +516,6 @@ int migrate_page_move_mapping(struct address_space *mapping,
 	}
 	local_irq_enable();
 
-	mem_cgroup_migrate(page, newpage);
-
 	return MIGRATEPAGE_SUCCESS;
 }
 EXPORT_SYMBOL(migrate_page_move_mapping);
@@ -561,8 +557,6 @@ int migrate_huge_page_move_mapping(struct address_space *mapping,
 	page_unfreeze_refs(page, expected_count - 1);
 
 	spin_unlock_irq(&mapping->tree_lock);
-
-	mem_cgroup_migrate(page, newpage);
 
 	return MIGRATEPAGE_SUCCESS;
 }
@@ -677,6 +671,8 @@ void migrate_page_copy(struct page *newpage, struct page *page)
 		end_page_writeback(newpage);
 
 	copy_page_owner(page, newpage);
+
+	mem_cgroup_migrate(page, newpage);
 }
 EXPORT_SYMBOL(migrate_page_copy);
 
