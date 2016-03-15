@@ -5653,7 +5653,6 @@ void mem_cgroup_uncharge_list(struct list_head *page_list)
  * be uncharged upon free.
  *
  * Both pages must be locked, @newpage->mapping must be set up.
- * Either or both pages might be on the LRU already.
  */
 void mem_cgroup_migrate(struct page *oldpage, struct page *newpage)
 {
@@ -5682,7 +5681,7 @@ void mem_cgroup_migrate(struct page *oldpage, struct page *newpage)
 	oldpage->mem_cgroup = NULL;
 	unlock_page_lru(oldpage, isolated);
 
-	commit_charge(newpage, memcg, true);
+	commit_charge(newpage, memcg, false);
 }
 
 /*
