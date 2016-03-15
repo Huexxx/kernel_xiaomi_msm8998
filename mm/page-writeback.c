@@ -2409,7 +2409,7 @@ int __set_page_dirty_no_writeback(struct page *page)
 /*
  * Helper function for set_page_dirty family.
  *
- * Caller must hold mem_cgroup_begin_page_stat().
+ * Caller must hold lock_page_memcg().
  *
  * NOTE: This relies on being atomic wrt interrupts.
  */
@@ -2441,7 +2441,7 @@ EXPORT_SYMBOL(account_page_dirtied);
 /*
  * Helper function for deaccounting dirty page without writeback.
  *
- * Caller must hold mem_cgroup_begin_page_stat().
+ * Caller must hold lock_page_memcg().
  */
 void account_page_cleaned(struct page *page, struct address_space *mapping,
 			  struct mem_cgroup *memcg, struct bdi_writeback *wb)
@@ -2470,13 +2470,13 @@ int __set_page_dirty_nobuffers(struct page *page)
 {
 	struct mem_cgroup *memcg;
 
-	memcg = mem_cgroup_begin_page_stat(page);
+	memcg = lock_page_memcg(page);
 	if (!TestSetPageDirty(page)) {
 		struct address_space *mapping = page_mapping(page);
 		unsigned long flags;
 
 		if (!mapping) {
-			mem_cgroup_end_page_stat(memcg);
+			unlock_page_memcg(memcg);
 			return 1;
 		}
 
@@ -2487,7 +2487,7 @@ int __set_page_dirty_nobuffers(struct page *page)
 		radix_tree_tag_set(&mapping->page_tree, page_index(page),
 				   PAGECACHE_TAG_DIRTY);
 		spin_unlock_irqrestore(&mapping->tree_lock, flags);
-		mem_cgroup_end_page_stat(memcg);
+		unlock_page_memcg(memcg);
 
 		if (mapping->host) {
 			/* !PageAnon && !swapper_space */
@@ -2495,7 +2495,7 @@ int __set_page_dirty_nobuffers(struct page *page)
 		}
 		return 1;
 	}
-	mem_cgroup_end_page_stat(memcg);
+	unlock_page_memcg(memcg);
 	return 0;
 }
 EXPORT_SYMBOL(__set_page_dirty_nobuffers);
@@ -2628,14 +2628,14 @@ void cancel_dirty_page(struct page *page)
 		struct mem_cgroup *memcg;
 		struct wb_lock_cookie cookie = {};
 
-		memcg = mem_cgroup_begin_page_stat(page);
+		memcg = lock_page_memcg(page);
 		wb = unlocked_inode_to_wb_begin(inode, &cookie);
 
 		if (TestClearPageDirty(page))
 			account_page_cleaned(page, mapping, memcg, wb);
 
 		unlocked_inode_to_wb_end(inode, &cookie);
-		mem_cgroup_end_page_stat(memcg);
+		unlock_page_memcg(memcg);
 	} else {
 		ClearPageDirty(page);
 	}
@@ -2704,7 +2704,7 @@ int clear_page_dirty_for_io(struct page *page)
 		 * always locked coming in here, so we get the desired
 		 * exclusion.
 		 */
-		memcg = mem_cgroup_begin_page_stat(page);
+		memcg = lock_page_memcg(page);
 		wb = unlocked_inode_to_wb_begin(inode, &cookie);
 		if (TestClearPageDirty(page)) {
 			mem_cgroup_dec_page_stat(memcg, MEM_CGROUP_STAT_DIRTY);
@@ -2713,7 +2713,7 @@ int clear_page_dirty_for_io(struct page *page)
 			ret = 1;
 		}
 		unlocked_inode_to_wb_end(inode, &cookie);
-		mem_cgroup_end_page_stat(memcg);
+		unlock_page_memcg(memcg);
 		return ret;
 	}
 	return TestClearPageDirty(page);
@@ -2726,7 +2726,7 @@ int test_clear_page_writeback(struct page *page)
 	struct mem_cgroup *memcg;
 	int ret;
 
-	memcg = mem_cgroup_begin_page_stat(page);
+	memcg = lock_page_memcg(page);
 	if (mapping) {
 		struct inode *inode = mapping->host;
 		struct backing_dev_info *bdi = inode_to_bdi(inode);
@@ -2754,7 +2754,7 @@ int test_clear_page_writeback(struct page *page)
 		dec_zone_page_state(page, NR_WRITEBACK);
 		inc_zone_page_state(page, NR_WRITTEN);
 	}
-	mem_cgroup_end_page_stat(memcg);
+	unlock_page_memcg(memcg);
 	return ret;
 }
 
@@ -2764,7 +2764,7 @@ int __test_set_page_writeback(struct page *page, bool keep_write)
 	struct mem_cgroup *memcg;
 	int ret;
 
-	memcg = mem_cgroup_begin_page_stat(page);
+	memcg = lock_page_memcg(page);
 	if (mapping) {
 		struct inode *inode = mapping->host;
 		struct backing_dev_info *bdi = inode_to_bdi(inode);
@@ -2795,7 +2795,7 @@ int __test_set_page_writeback(struct page *page, bool keep_write)
 		mem_cgroup_inc_page_stat(memcg, MEM_CGROUP_STAT_WRITEBACK);
 		inc_zone_page_state(page, NR_WRITEBACK);
 	}
-	mem_cgroup_end_page_stat(memcg);
+	unlock_page_memcg(memcg);
 	return ret;
 
 }
