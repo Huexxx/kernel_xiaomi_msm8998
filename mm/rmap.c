@@ -1229,21 +1229,17 @@ void page_add_new_anon_rmap(struct page *page,
  */
 void page_add_file_rmap(struct page *page)
 {
-	struct mem_cgroup *memcg;
-
-	memcg = lock_page_memcg(page);
+	lock_page_memcg(page);
 	if (atomic_inc_and_test(&page->_mapcount)) {
 		__inc_zone_page_state(page, NR_FILE_MAPPED);
-		mem_cgroup_inc_page_stat(memcg, MEM_CGROUP_STAT_FILE_MAPPED);
+		mem_cgroup_inc_page_stat(page, MEM_CGROUP_STAT_FILE_MAPPED);
 	}
-	unlock_page_memcg(memcg);
+	unlock_page_memcg(page);
 }
 
 static void page_remove_file_rmap(struct page *page)
 {
-	struct mem_cgroup *memcg;
-
-	memcg = lock_page_memcg(page);
+	lock_page_memcg(page);
 
 	/* page still mapped by someone else? */
 	if (!atomic_add_negative(-1, &page->_mapcount))
@@ -1259,12 +1255,12 @@ static void page_remove_file_rmap(struct page *page)
 	 * pte lock(a spinlock) is held, which implies preemption disabled.
 	 */
 	__dec_zone_page_state(page, NR_FILE_MAPPED);
-	mem_cgroup_dec_page_stat(memcg, MEM_CGROUP_STAT_FILE_MAPPED);
+	mem_cgroup_dec_page_stat(page, MEM_CGROUP_STAT_FILE_MAPPED);
 
 	if (unlikely(PageMlocked(page)))
 		clear_page_mlock(page);
 out:
-	unlock_page_memcg(memcg);
+	unlock_page_memcg(page);
 }
 
 /**
