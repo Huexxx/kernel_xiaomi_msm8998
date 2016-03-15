@@ -264,17 +264,6 @@ static inline bool mem_cgroup_is_root(struct mem_cgroup *memcg)
 	return (memcg == root_mem_cgroup);
 }
 
-/*
- * We restrict the id in the range of [1, 65535], so it can fit into
- * an unsigned short.
- */
-#define MEM_CGROUP_ID_MAX	USHRT_MAX
-
-static inline unsigned short mem_cgroup_id(struct mem_cgroup *memcg)
-{
-	return memcg->id.id;
-}
-
 /* Writing them here to avoid exposing memcg's inner layout */
 #if defined(CONFIG_INET) && defined(CONFIG_MEMCG_KMEM)
 
@@ -4186,18 +4175,6 @@ static inline void mem_cgroup_id_get(struct mem_cgroup *memcg)
 static inline void mem_cgroup_id_put(struct mem_cgroup *memcg)
 {
 	mem_cgroup_id_put_many(memcg, 1);
-}
-
-/**
- * mem_cgroup_from_id - look up a memcg from a memcg id
- * @id: the memcg id to look up
- *
- * Caller must hold rcu_read_lock().
- */
-struct mem_cgroup *mem_cgroup_from_id(unsigned short id)
-{
-	WARN_ON_ONCE(!rcu_read_lock_held());
-	return idr_find(&mem_cgroup_idr, id);
 }
 
 static int alloc_mem_cgroup_per_zone_info(struct mem_cgroup *memcg, int node)
