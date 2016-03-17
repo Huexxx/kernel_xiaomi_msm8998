@@ -1854,7 +1854,6 @@ static void shmem_tag_pins(struct address_space *mapping)
 	start = 0;
 
 	spin_lock_irq(&mapping->tree_lock);
-restart:
 	radix_tree_for_each_slot(slot, &mapping->page_tree, &iter, start) {
 		page = radix_tree_deref_slot_protected(slot, &mapping->tree_lock);
 		if (!page || radix_tree_exception(page)) {
@@ -1872,9 +1871,8 @@ restart:
 
 		spin_unlock_irq(&mapping->tree_lock);
 		cond_resched();
-		start = iter.index + 1;
+		slot = radix_tree_iter_next(&iter);
 		spin_lock_irq(&mapping->tree_lock);
-		goto restart;
 	}
 	spin_unlock_irq(&mapping->tree_lock);
 }
@@ -1910,7 +1908,6 @@ static int shmem_wait_for_pins(struct address_space *mapping)
 
 		start = 0;
 		rcu_read_lock();
-restart:
 		radix_tree_for_each_tagged(slot, &mapping->page_tree, &iter,
 					   start, SHMEM_TAG_PINNED) {
 
@@ -1944,8 +1941,7 @@ restart:
 continue_resched:
 			if (need_resched()) {
 				cond_resched_rcu();
-				start = iter.index + 1;
-				goto restart;
+				slot = radix_tree_iter_next(&iter);
 			}
 		}
 		rcu_read_unlock();
