@@ -324,14 +324,13 @@ void __dump_page_owner(struct page *page)
 	}
 
 	depot_fetch_stack(handle, &trace);
-	pr_alert("page allocated via order %u, migratetype %s, "
-			"gfp_mask %#x(%pGg)\n", page_ext->order,
-			migratetype_names[mt], gfp_mask, &gfp_mask);
+	pr_alert("page allocated via order %u, migratetype %s, gfp_mask %#x(%pGg)\n",
+		 page_ext->order, migratetype_names[mt], gfp_mask, &gfp_mask);
 	print_stack_trace(&trace, 0);
 
 	if (page_ext->last_migrate_reason != -1)
 		pr_alert("page has been migrated, last migrate reason: %s\n",
-			migrate_reason_names[page_ext->last_migrate_reason]);
+			 migrate_reason_names[page_ext->last_migrate_reason]);
 }
 
 static ssize_t
