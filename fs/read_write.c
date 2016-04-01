@@ -368,11 +368,6 @@ ssize_t vfs_iter_write(struct file *file, struct iov_iter *iter, loff_t *ppos)
 }
 EXPORT_SYMBOL(vfs_iter_write);
 
-/*
- * rw_verify_area doesn't like huge counts. We limit
- * them to something that fits in "int" so that others
- * won't have to do range checks all the time.
- */
 int rw_verify_area(int read_write, struct file *file, const loff_t *ppos, size_t count)
 {
 	struct inode *inode;
@@ -400,11 +395,8 @@ int rw_verify_area(int read_write, struct file *file, const loff_t *ppos, size_t
 		if (retval < 0)
 			return retval;
 	}
-	retval = security_file_permission(file,
+	return security_file_permission(file,
 				read_write == READ ? MAY_READ : MAY_WRITE);
-	if (retval)
-		return retval;
-	return count > MAX_RW_COUNT ? MAX_RW_COUNT : count;
 }
 
 static ssize_t new_sync_read(struct file *filp, char __user *buf, size_t len, loff_t *ppos)
@@ -448,8 +440,9 @@ ssize_t vfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
 		return -EFAULT;
 
 	ret = rw_verify_area(READ, file, pos, count);
-	if (ret >= 0) {
-		count = ret;
+	if (!ret) {
+		if (count > MAX_RW_COUNT)
+			count =  MAX_RW_COUNT;
 		ret = __vfs_read(file, buf, count, pos);
 		if (ret > 0) {
 			fsnotify_access(file);
@@ -531,8 +524,9 @@ ssize_t vfs_write(struct file *file, const char __user *buf, size_t count, loff_
 		return -EFAULT;
 
 	ret = rw_verify_area(WRITE, file, pos, count);
-	if (ret >= 0) {
-		count = ret;
+	if (!ret) {
+		if (count > MAX_RW_COUNT)
+			count =  MAX_RW_COUNT;
 		file_start_write(file);
 		ret = __vfs_write(file, buf, count, pos);
 		if (ret > 0) {
@@ -1177,7 +1171,8 @@ static ssize_t do_sendfile(int out_fd, int in_fd, loff_t *ppos,
 	retval = rw_verify_area(READ, in.file, &pos, count);
 	if (retval < 0)
 		goto fput_in;
-	count = retval;
+	if (count > MAX_RW_COUNT)
+		count =  MAX_RW_COUNT;
 
 	/*
 	 * Get output file, and verify that it is ok..
@@ -1195,7 +1190,6 @@ static ssize_t do_sendfile(int out_fd, int in_fd, loff_t *ppos,
 	retval = rw_verify_area(WRITE, out.file, &out_pos, count);
 	if (retval < 0)
 		goto fput_out;
-	count = retval;
 
 	if (!max)
 		max = min(in_inode->i_sb->s_maxbytes, out_inode->i_sb->s_maxbytes);
