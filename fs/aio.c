@@ -1470,8 +1470,6 @@ rw_common:
 			return ret;
 		}
 
-		len = ret;
-
 		get_file(file);
 		if (rw == WRITE)
 			file_start_write(file);
