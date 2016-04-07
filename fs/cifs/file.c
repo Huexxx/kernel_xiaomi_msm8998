@@ -2740,11 +2740,8 @@ cifs_writev(struct kiocb *iocb, struct iov_iter *from)
 out:
 	mutex_unlock(&inode->i_mutex);
 
-	if (rc > 0) {
-		ssize_t err = generic_write_sync(iocb, iocb->ki_pos - rc, rc);
-		if (err < 0)
-			rc = err;
-	}
+	if (rc > 0)
+		rc = generic_write_sync(iocb, rc);
 	up_read(&cinode->lock_sem);
 	return rc;
 }
