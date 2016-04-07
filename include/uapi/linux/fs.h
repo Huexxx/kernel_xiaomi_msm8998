@@ -267,5 +267,7 @@ struct fscrypt_key {
 
 /* flags for preadv2/pwritev2: */
 #define RWF_HIPRI			0x00000001 /* high priority request, poll if possible */
+#define RWF_DSYNC			0x00000002 /* per-IO O_DSYNC */
+#define RWF_SYNC			0x00000004 /* per-IO O_SYNC */
 
 #endif /* _UAPI_LINUX_FS_H */
