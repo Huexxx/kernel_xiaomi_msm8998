@@ -1799,8 +1799,6 @@ generic_file_read_iter(struct kiocb *iocb, struct iov_iter *iter)
 {
 	struct file *file = iocb->ki_filp;
 	ssize_t retval = 0;
-	loff_t *ppos = &iocb->ki_pos;
-	loff_t pos = *ppos;
 
 	if (iocb->ki_flags & IOCB_DIRECT) {
 		struct address_space *mapping = file->f_mapping;
@@ -1811,15 +1809,16 @@ generic_file_read_iter(struct kiocb *iocb, struct iov_iter *iter)
 		if (!count)
 			goto out; /* skip atime */
 		size = i_size_read(inode);
-		retval = filemap_write_and_wait_range(mapping, pos,
-					pos + count - 1);
+		retval = filemap_write_and_wait_range(mapping, iocb->ki_pos,
+					iocb->ki_pos + count - 1);
 		if (!retval) {
 			struct iov_iter data = *iter;
-			retval = mapping->a_ops->direct_IO(iocb, &data, pos);
+			retval = mapping->a_ops->direct_IO(iocb, &data,
+					iocb->ki_pos);
 		}
 
 		if (retval > 0) {
-			*ppos = pos + retval;
+			iocb->ki_pos += retval;
 			iov_iter_advance(iter, retval);
 		}
 
@@ -1832,14 +1831,14 @@ generic_file_read_iter(struct kiocb *iocb, struct iov_iter *iter)
 		 * the rest of the read.  Buffered reads will not work for
 		 * DAX files, so don't bother trying.
 		 */
-		if (retval < 0 || !iov_iter_count(iter) || *ppos >= size ||
+		if (retval < 0 || !iov_iter_count(iter) || iocb->ki_pos >= size ||
 		    IS_DAX(inode)) {
 			file_accessed(file);
 			goto out;
 		}
 	}
 
-	retval = do_generic_file_read(file, ppos, iter, retval);
+	retval = do_generic_file_read(file, &iocb->ki_pos, iter, retval);
 out:
 	return retval;
 }
