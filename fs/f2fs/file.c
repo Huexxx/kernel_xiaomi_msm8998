@@ -3070,13 +3070,8 @@ write:
 out:
 	trace_f2fs_file_write_iter(inode, iocb->ki_pos,
 					iov_iter_count(from), ret);
-	if (ret > 0) {
-		ssize_t err;
-
-		err = generic_write_sync(iocb, iocb->ki_pos - ret, ret);
-		if (err < 0)
-			ret = err;
-	}
+	if (ret > 0)
+		ret = generic_write_sync(iocb, ret);
 	return ret;
 }
 
