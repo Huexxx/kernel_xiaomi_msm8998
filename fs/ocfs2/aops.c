@@ -979,8 +979,7 @@ out:
 	return ret;
 }
 
-static ssize_t ocfs2_direct_IO(struct kiocb *iocb, struct iov_iter *iter,
-			       loff_t offset)
+static ssize_t ocfs2_direct_IO(struct kiocb *iocb, struct iov_iter *iter)
 {
 	struct file *file = iocb->ki_filp;
 	struct inode *inode = file_inode(file)->i_mapping->host;
@@ -998,16 +997,15 @@ static ssize_t ocfs2_direct_IO(struct kiocb *iocb, struct iov_iter *iter,
 	/* Fallback to buffered I/O if we are appending and
 	 * concurrent O_DIRECT writes are allowed.
 	 */
-	if (i_size_read(inode) <= offset && !full_coherency)
+	if (i_size_read(inode) <= iocb->ki_pos && !full_coherency)
 		return 0;
 
 	if (iov_iter_rw(iter) == READ)
 		return __blockdev_direct_IO(iocb, inode, inode->i_sb->s_bdev,
-					    iter, offset,
-					    ocfs2_direct_IO_get_blocks,
+					    iter, ocfs2_direct_IO_get_blocks,
 					    ocfs2_dio_end_io, NULL, 0);
 	else
-		return ocfs2_direct_IO_write(iocb, iter, offset);
+		return ocfs2_direct_IO_write(iocb, iter, iocb->ki_pos);
 }
 
 static void ocfs2_figure_cluster_boundaries(struct ocfs2_super *osb,
