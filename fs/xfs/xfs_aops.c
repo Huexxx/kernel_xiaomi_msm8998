@@ -1711,15 +1711,14 @@ xfs_vm_do_dio(
 STATIC ssize_t
 xfs_vm_direct_IO(
 	struct kiocb		*iocb,
-	struct iov_iter		*iter,
-	loff_t			offset)
+	struct iov_iter		*iter)
 {
 	struct inode		*inode = iocb->ki_filp->f_mapping->host;
 
 	if (iov_iter_rw(iter) == WRITE)
-		return xfs_vm_do_dio(inode, iocb, iter, offset,
+		return xfs_vm_do_dio(inode, iocb, iter, iocb->ki_pos,
 				     xfs_end_io_direct_write, DIO_ASYNC_EXTEND);
-	return xfs_vm_do_dio(inode, iocb, iter, offset, NULL, 0);
+	return xfs_vm_do_dio(inode, iocb, iter, iocb->ki_pos, NULL, 0);
 }
 
 /*

@@ -256,7 +256,7 @@ static int nfs_direct_cmp_commit_data_verf(struct nfs_direct_req *dreq,
  * shunt off direct read and write requests before the VFS gets them,
  * so this method is only ever called for swap.
  */
-ssize_t nfs_direct_IO(struct kiocb *iocb, struct iov_iter *iter, loff_t pos)
+ssize_t nfs_direct_IO(struct kiocb *iocb, struct iov_iter *iter)
 {
 	struct inode *inode = iocb->ki_filp->f_mapping->host;
 
@@ -267,7 +267,7 @@ ssize_t nfs_direct_IO(struct kiocb *iocb, struct iov_iter *iter, loff_t pos)
 	VM_BUG_ON(iov_iter_count(iter) != PAGE_SIZE);
 
 	if (iov_iter_rw(iter) == READ)
-		return nfs_file_direct_read(iocb, iter, pos);
+		return nfs_file_direct_read(iocb, iter);
 	return nfs_file_direct_write(iocb, iter);
 }
 
@@ -551,7 +551,6 @@ static ssize_t nfs_direct_read_schedule_iovec(struct nfs_direct_req *dreq,
  * nfs_file_direct_read - file direct read operation for NFS files
  * @iocb: target I/O control block
  * @iter: vector of user buffers into which to read data
- * @pos: byte offset in file where reading starts
  *
  * We use this function for direct reads instead of calling
  * generic_file_aio_read() in order to avoid gfar's check to see if
@@ -567,8 +566,7 @@ static ssize_t nfs_direct_read_schedule_iovec(struct nfs_direct_req *dreq,
  * client must read the updated atime from the server back into its
  * cache.
  */
-ssize_t nfs_file_direct_read(struct kiocb *iocb, struct iov_iter *iter,
-				loff_t pos)
+ssize_t nfs_file_direct_read(struct kiocb *iocb, struct iov_iter *iter)
 {
 	struct file *file = iocb->ki_filp;
 	struct address_space *mapping = file->f_mapping;
@@ -580,7 +578,7 @@ ssize_t nfs_file_direct_read(struct kiocb *iocb, struct iov_iter *iter,
 	nfs_add_stats(mapping->host, NFSIOS_DIRECTREADBYTES, count);
 
 	dfprintk(FILE, "NFS: direct read(%pD2, %zd@%Ld)\n",
-		file, count, (long long) pos);
+		file, count, (long long) iocb->ki_pos);
 
 	result = 0;
 	if (!count)
@@ -600,7 +598,7 @@ ssize_t nfs_file_direct_read(struct kiocb *iocb, struct iov_iter *iter,
 
 	dreq->inode = inode;
 	dreq->bytes_left = count;
-	dreq->io_start = pos;
+	dreq->io_start = iocb->ki_pos;
 	dreq->ctx = get_nfs_open_context(nfs_file_open_context(iocb->ki_filp));
 	l_ctx = nfs_get_lock_context(dreq->ctx);
 	if (IS_ERR(l_ctx)) {
@@ -613,14 +611,14 @@ ssize_t nfs_file_direct_read(struct kiocb *iocb, struct iov_iter *iter,
 		dreq->iocb = iocb;
 
 	NFS_I(inode)->read_io += count;
-	result = nfs_direct_read_schedule_iovec(dreq, iter, pos);
+	result = nfs_direct_read_schedule_iovec(dreq, iter, iocb->ki_pos);
 
 	mutex_unlock(&inode->i_mutex);
 
 	if (!result) {
 		result = nfs_direct_wait(dreq);
 		if (result > 0)
-			iocb->ki_pos = pos + result;
+			iocb->ki_pos += result;
 	}
 
 	nfs_direct_req_release(dreq);
@@ -953,7 +951,6 @@ static ssize_t nfs_direct_write_schedule_iovec(struct nfs_direct_req *dreq,
  * nfs_file_direct_write - file direct write operation for NFS files
  * @iocb: target I/O control block
  * @iter: vector of user buffers from which to write data
- * @pos: byte offset in file where writing starts
  *
  * We use this function for direct writes instead of calling
  * generic_file_aio_write() in order to avoid taking the inode
