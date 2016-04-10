@@ -568,7 +568,7 @@ nfsd3_proc_fsinfo(struct svc_rqst * rqstp, struct nfsd_fhandle    *argp,
 	 * different read/write sizes for file systems known to have
 	 * problems with large blocks */
 	if (nfserr == 0) {
-		struct super_block *sb = d_inode(argp->fh.fh_dentry)->i_sb;
+		struct super_block *sb = argp->fh.fh_dentry->d_sb;
 
 		/* Note that we don't care for remote fs's here */
 		if (sb->s_magic == MSDOS_SUPER_MAGIC) {
@@ -604,7 +604,7 @@ nfsd3_proc_pathconf(struct svc_rqst * rqstp, struct nfsd_fhandle      *argp,
 	nfserr = fh_verify(rqstp, &argp->fh, 0, NFSD_MAY_NOP);
 
 	if (nfserr == 0) {
-		struct super_block *sb = d_inode(argp->fh.fh_dentry)->i_sb;
+		struct super_block *sb = argp->fh.fh_dentry->d_sb;
 
 		/* Note that we don't care for remote fs's here */
 		switch (sb->s_magic) {

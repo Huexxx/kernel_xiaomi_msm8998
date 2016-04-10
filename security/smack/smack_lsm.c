@@ -1446,7 +1446,16 @@ static int smack_inode_removexattr(struct dentry *dentry, const char *name)
 	 *	XATTR_NAME_SMACKIPOUT
 	 *	XATTR_NAME_SMACKEXEC
 	 */
+<<<<<<< HEAD
 	if (strcmp(name, XATTR_NAME_SMACK) == 0)
+=======
+	if (strcmp(name, XATTR_NAME_SMACK) == 0) {
+		struct super_block *sbp = dentry->d_sb;
+		struct superblock_smack *sbsp = sbp->s_security;
+
+		isp->smk_inode = sbsp->smk_default;
+	} else if (strcmp(name, XATTR_NAME_SMACKEXEC) == 0)
+>>>>>>> fc64005c9309 (don't bother with ->d_inode->i_sb - it's always equal to ->d_sb)
 		isp->smk_task = NULL;
 	else if (strcmp(name, XATTR_NAME_SMACKMMAP) == 0)
 		isp->smk_mmap = NULL;
