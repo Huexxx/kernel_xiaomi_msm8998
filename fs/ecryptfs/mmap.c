@@ -437,8 +437,9 @@ static int ecryptfs_write_inode_size_to_xattr(struct inode *ecryptfs_inode)
 		goto out;
 	}
 	mutex_lock(&lower_inode->i_mutex);
-	size = lower_inode->i_op->getxattr(lower_dentry, ECRYPTFS_XATTR_NAME,
-					   xattr_virt, PAGE_SIZE);
+	size = lower_inode->i_op->getxattr(lower_dentry, lower_inode,
+					   ECRYPTFS_XATTR_NAME,
+					   xattr_virt, PAGE_CACHE_SIZE);
 	if (size < 0)
 		size = 8;
 	put_unaligned_be64(i_size_read(ecryptfs_inode), xattr_virt);
