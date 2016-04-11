@@ -272,7 +272,7 @@ static struct smack_known *smk_fetch(const char *name, struct inode *ip,
 	if (buffer == NULL)
 		return ERR_PTR(-ENOMEM);
 
-	rc = ip->i_op->getxattr(dp, name, buffer, SMK_LONGLABEL);
+	rc = ip->i_op->getxattr(dp, ip, name, buffer, SMK_LONGLABEL);
 	if (rc < 0)
 		skp = ERR_PTR(rc);
 	else if (rc == 0)
@@ -1445,16 +1445,7 @@ static int smack_inode_removexattr(struct dentry *dentry, const char *name)
 	 *	XATTR_NAME_SMACKIPOUT
 	 *	XATTR_NAME_SMACKEXEC
 	 */
-<<<<<<< HEAD
 	if (strcmp(name, XATTR_NAME_SMACK) == 0)
-=======
-	if (strcmp(name, XATTR_NAME_SMACK) == 0) {
-		struct super_block *sbp = dentry->d_sb;
-		struct superblock_smack *sbsp = sbp->s_security;
-
-		isp->smk_inode = sbsp->smk_default;
-	} else if (strcmp(name, XATTR_NAME_SMACKEXEC) == 0)
->>>>>>> fc64005c9309 (don't bother with ->d_inode->i_sb - it's always equal to ->d_sb)
 		isp->smk_task = NULL;
 	else if (strcmp(name, XATTR_NAME_SMACKMMAP) == 0)
 		isp->smk_mmap = NULL;
@@ -3507,7 +3498,7 @@ static void smack_d_instantiate(struct dentry *opt_dentry, struct inode *inode)
 					TRANS_TRUE, TRANS_TRUE_SIZE,
 					0);
 			} else {
-				rc = inode->i_op->getxattr(dp,
+				rc = inode->i_op->getxattr(dp, inode,
 					XATTR_NAME_SMACKTRANSMUTE, trattr,
 					TRANS_TRUE_SIZE);
 				if (rc >= 0 && strncmp(trattr, TRANS_TRUE,
