@@ -846,11 +846,10 @@ out:
 	return err;
 }
 
-static int ceph_sync_setxattr(struct dentry *dentry, const char *name,
+static int ceph_sync_setxattr(struct inode *inode, const char *name,
 			      const char *value, size_t size, int flags)
 {
-	struct ceph_fs_client *fsc = ceph_sb_to_client(dentry->d_sb);
-	struct inode *inode = d_inode(dentry);
+	struct ceph_fs_client *fsc = ceph_sb_to_client(inode->i_sb);
 	struct ceph_inode_info *ci = ceph_inode(inode);
 	struct ceph_mds_request *req;
 	struct ceph_mds_client *mdsc = fsc->mdsc;
@@ -908,13 +907,12 @@ out:
 	return err;
 }
 
-int __ceph_setxattr(struct dentry *dentry, const char *name,
+int __ceph_setxattr(struct inode *inode, const char *name,
 			const void *value, size_t size, int flags)
 {
-	struct inode *inode = d_inode(dentry);
 	struct ceph_vxattr *vxattr;
 	struct ceph_inode_info *ci = ceph_inode(inode);
-	struct ceph_mds_client *mdsc = ceph_sb_to_client(dentry->d_sb)->mdsc;
+	struct ceph_mds_client *mdsc = ceph_sb_to_client(inode->i_sb)->mdsc;
 	struct ceph_cap_flush *prealloc_cf = NULL;
 	struct ceph_buffer *old_blob = NULL;
 	int issued;
@@ -1022,7 +1020,7 @@ do_sync:
 do_sync_unlocked:
 	if (lock_snap_rwsem)
 		up_read(&mdsc->snap_rwsem);
-	err = ceph_sync_setxattr(dentry, name, value, size, flags);
+	err = ceph_sync_setxattr(inode, name, value, size, flags);
 out:
 	ceph_free_cap_flush(prealloc_cf);
 	kfree(newname);
@@ -1043,14 +1041,13 @@ int ceph_setxattr(struct dentry *dentry, const char *name,
 	if (size == 0)
 		value = "";  /* empty EA, do not remove */
 
-	return __ceph_setxattr(dentry, name, value, size, flags);
+	return __ceph_setxattr(d_inode(dentry), name, value, size, flags);
 }
 
-static int ceph_send_removexattr(struct dentry *dentry, const char *name)
+static int ceph_send_removexattr(struct inode *inode, const char *name)
 {
-	struct ceph_fs_client *fsc = ceph_sb_to_client(dentry->d_sb);
+	struct ceph_fs_client *fsc = ceph_sb_to_client(inode->i_sb);
 	struct ceph_mds_client *mdsc = fsc->mdsc;
-	struct inode *inode = d_inode(dentry);
 	struct ceph_mds_request *req;
 	int err;
 
@@ -1071,12 +1068,11 @@ static int ceph_send_removexattr(struct dentry *dentry, const char *name)
 	return err;
 }
 
-int __ceph_removexattr(struct dentry *dentry, const char *name)
+static int __ceph_removexattr(struct inode *inode, const char *name)
 {
-	struct inode *inode = d_inode(dentry);
 	struct ceph_vxattr *vxattr;
 	struct ceph_inode_info *ci = ceph_inode(inode);
-	struct ceph_mds_client *mdsc = ceph_sb_to_client(dentry->d_sb)->mdsc;
+	struct ceph_mds_client *mdsc = ceph_sb_to_client(inode->i_sb)->mdsc;
 	struct ceph_cap_flush *prealloc_cf = NULL;
 	int issued;
 	int err;
@@ -1157,7 +1153,7 @@ do_sync_unlocked:
 	if (lock_snap_rwsem)
 		up_read(&mdsc->snap_rwsem);
 	ceph_free_cap_flush(prealloc_cf);
-	err = ceph_send_removexattr(dentry, name);
+	err = ceph_send_removexattr(inode, name);
 	return err;
 }
 
@@ -1169,5 +1165,5 @@ int ceph_removexattr(struct dentry *dentry, const char *name)
 	if (!strncmp(name, XATTR_SYSTEM_PREFIX, XATTR_SYSTEM_PREFIX_LEN))
 		return generic_removexattr(dentry, name);
 
-	return __ceph_removexattr(dentry, name);
+	return __ceph_removexattr(d_inode(dentry), name);
 }
