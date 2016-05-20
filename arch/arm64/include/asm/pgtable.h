@@ -422,11 +422,6 @@ void pmdp_splitting_flush(struct vm_area_struct *vma, unsigned long address,
 
 #define set_pmd_at(mm, addr, pmdp, pmd)	set_pte_at(mm, addr, (pte_t *)pmdp, pmd_pte(pmd))
 
-static inline int has_transparent_hugepage(void)
-{
-	return 1;
-}
-
 #define __pgprot_modify(prot,mask,bits) \
 	__pgprot((pgprot_val(prot) & ~(mask)) | (bits))
 
