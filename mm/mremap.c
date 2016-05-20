@@ -215,9 +215,8 @@ unsigned long move_page_tables(struct vm_area_struct *vma,
 				/* See comment in move_ptes() */
 				if (need_rmap_locks)
 					anon_vma_lock_write(vma->anon_vma);
-				err = move_huge_pmd(vma, new_vma, old_addr,
-						    new_addr, old_end,
-						    old_pmd, new_pmd);
+				err = move_huge_pmd(vma, old_addr, new_addr,
+						    old_end, old_pmd, new_pmd);
 				if (need_rmap_locks)
 					anon_vma_unlock_write(vma->anon_vma);
 			}
