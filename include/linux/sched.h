@@ -1699,6 +1699,7 @@ struct task_struct {
 	unsigned			sched_psi_wake_requeue:1;
 #endif
 
+	unsigned sched_remote_wakeup:1;
 	unsigned :0; /* force alignment to the next boundary */
 
 	/* unserialized, strictly 'current' */
