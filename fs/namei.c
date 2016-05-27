@@ -1944,7 +1944,11 @@ out_path_put:
 
 #include <asm/word-at-a-time.h>
 
-#ifdef CONFIG_64BIT
+#ifdef HASH_MIX
+
+/* Architecture provides HASH_MIX and fold_hash() in <asm/hash.h> */
+
+#elif defined(CONFIG_64BIT)
 /*
  * Register pressure in the mixing function is an issue, particularly
  * on 32-bit x86, but almost any function requires one state value and
