@@ -1057,9 +1057,6 @@ int arm_pmu_device_probe(struct platform_device *pdev,
 
 	armpmu_init(pmu);
 
-	if (!__oprofile_cpu_pmu)
-		__oprofile_cpu_pmu = pmu;
-
 	pmu->plat_device = pdev;
 
 	ret = cpu_pmu_init(pmu);
@@ -1097,6 +1094,9 @@ int arm_pmu_device_probe(struct platform_device *pdev,
 
 	pmu->pmu_state  = ARM_PMU_STATE_OFF;
 	pmu->percpu_irq = -1;
+
+	if (!__oprofile_cpu_pmu)
+		__oprofile_cpu_pmu = pmu;
 
 	pr_info("enabled with %s PMU driver, %d counters available\n",
 			pmu->name, pmu->num_events);
