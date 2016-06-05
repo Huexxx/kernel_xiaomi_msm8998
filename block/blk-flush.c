@@ -10,8 +10,8 @@
  * optional steps - PREFLUSH, DATA and POSTFLUSH - according to the request
  * properties and hardware capability.
  *
- * If a request doesn't have data, only REQ_FLUSH makes sense, which
- * indicates a simple flush request.  If there is data, REQ_FLUSH indicates
+ * If a request doesn't have data, only REQ_PREFLUSH makes sense, which
+ * indicates a simple flush request.  If there is data, REQ_PREFLUSH indicates
  * that the device cache should be flushed before the data is executed, and
  * REQ_FUA means that the data must be on non-volatile media on request
  * completion.
@@ -20,11 +20,11 @@
  * difference.  The requests are either completed immediately if there's no
  * data or executed as normal requests otherwise.
  *
- * If the device has writeback cache and supports FUA, REQ_FLUSH is
+ * If the device has writeback cache and supports FUA, REQ_PREFLUSH is
  * translated to PREFLUSH but REQ_FUA is passed down directly with DATA.
  *
- * If the device has writeback cache and doesn't support FUA, REQ_FLUSH is
- * translated to PREFLUSH and REQ_FUA to POSTFLUSH.
+ * If the device has writeback cache and doesn't support FUA, REQ_PREFLUSH
+ * is translated to PREFLUSH and REQ_FUA to POSTFLUSH.
  *
  * The actual execution of flush is double buffered.  Whenever a request
  * needs to execute PRE or POSTFLUSH, it queues at
@@ -102,8 +102,8 @@ static unsigned int blk_flush_policy(unsigned int fflags, struct request *rq)
 	if (blk_rq_sectors(rq))
 		policy |= REQ_FSEQ_DATA;
 
-	if (fflags & REQ_FLUSH) {
-		if (rq->cmd_flags & REQ_FLUSH)
+	if (fflags & REQ_PREFLUSH) {
+		if (rq->cmd_flags & REQ_PREFLUSH)
 			policy |= REQ_FSEQ_PREFLUSH;
 		if (!(fflags & REQ_FUA) && (rq->cmd_flags & REQ_FUA))
 			policy |= REQ_FSEQ_POSTFLUSH;
@@ -390,9 +390,9 @@ void blk_insert_flush(struct request *rq)
 
 	/*
 	 * @policy now records what operations need to be done.  Adjust
-	 * REQ_FLUSH and FUA for the driver.
+	 * REQ_PREFLUSH and FUA for the driver.
 	 */
-	rq->cmd_flags &= ~REQ_FLUSH;
+	rq->cmd_flags &= ~REQ_PREFLUSH;
 	if (!(fflags & REQ_FUA))
 		rq->cmd_flags &= ~REQ_FUA;
 

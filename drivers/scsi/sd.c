@@ -139,7 +139,7 @@ static void sd_set_flush_flag(struct scsi_disk *sdkp)
 	unsigned flush = 0;
 
 	if (sdkp->WCE) {
-		flush |= REQ_FLUSH;
+		flush |= REQ_OP_FLUSH;
 		if (sdkp->DPOFUA)
 			flush |= REQ_FUA;
 	}
