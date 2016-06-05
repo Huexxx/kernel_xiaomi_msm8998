@@ -610,7 +610,8 @@ static int read_from_bdev_async(struct zram *zram, struct bio_vec *bvec,
 		bio_chain(bio, parent);
 	}
 
-	submit_bio(READ, bio);
+	bio->bi_rw = READ;
+	submit_bio(bio);
 	return 1;
 }
 
@@ -716,11 +717,12 @@ static ssize_t writeback_store(struct device *dev,
 		bio.bi_iter.bi_sector = blk_idx * (PAGE_SIZE >> 9);
 		bio_add_page(&bio, bvec.bv_page, bvec.bv_len,
 				bvec.bv_offset);
+		bio.bi_rw = REQ_WRITE | REQ_SYNC;
 		/*
 		 * XXX: A single page IO would be inefficient for write
 		 * but it would be not bad as starter.
 		 */
-		ret = submit_bio_wait(REQ_WRITE|REQ_SYNC, &bio);
+		ret = submit_bio_wait(&bio);
 		if (ret) {
 			zram_slot_lock(zram, index);
 			zram_clear_flag(zram, index, ZRAM_UNDER_WB);

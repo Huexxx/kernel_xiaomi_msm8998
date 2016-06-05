@@ -113,7 +113,7 @@ int fscrypt_zeroout_range(const struct inode *inode, pgoff_t lblk,
 			err = -EIO;
 			goto errout;
 		}
-		err = submit_bio_wait(0, bio);
+		err = submit_bio_wait(bio);
 		bio_put(bio);
 		if (err)
 			goto errout;

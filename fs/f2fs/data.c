@@ -369,7 +369,7 @@ submit_io:
 		trace_f2fs_submit_read_bio(sbi->sb, type, bio);
 	else
 		trace_f2fs_submit_write_bio(sbi->sb, type, bio);
-	submit_bio(bio_op(bio), bio);
+	submit_bio(bio);
 }
 
 static void __submit_merged_bio(struct f2fs_bio_info *io)
@@ -2941,7 +2941,8 @@ static void f2fs_dio_submit_bio(int rw, struct bio *bio, struct inode *inode,
 	inc_page_count(F2FS_I_SB(inode),
 			write ? F2FS_DIO_WRITE : F2FS_DIO_READ);
 
-	submit_bio(rw, bio);
+	bio->bi_rw = rw;
+	submit_bio(bio);
 	return;
 out:
 	bio->bi_error = -EIO;
