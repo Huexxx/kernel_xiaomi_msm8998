@@ -215,6 +215,7 @@ int gfs2_meta_read(struct gfs2_glock *gl, u64 blkno, int flags,
 		unlock_buffer(bh);
 		return 0;
 	}
+
 	bh->b_end_io = end_buffer_read_sync;
 	get_bh(bh);
 	submit_bh(READ_SYNC | REQ_META | REQ_PRIO, bh);
