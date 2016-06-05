@@ -253,7 +253,8 @@ int ext4_mpage_readpages(struct inode *inode,
 			bio->bi_iter.bi_sector = blocks[0] << (blkbits - 9);
 			bio->bi_end_io = mpage_end_io;
 			bio->bi_private = ctx;
-			bio->bi_rw = READ | (rac ? REQ_RAHEAD : 0);
+			bio_set_op_attrs(bio, REQ_OP_READ |
+					(rac ? REQ_RAHEAD : 0), 0);
 		}
 
 		length = first_hole << blkbits;

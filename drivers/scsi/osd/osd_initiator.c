@@ -729,7 +729,7 @@ static int _osd_req_list_objects(struct osd_request *or,
 		return PTR_ERR(bio);
 	}
 
-	bio->bi_rw &= ~REQ_WRITE;
+	bio_set_op_attrs(bio, REQ_OP_READ, 0);
 	or->in.bio = bio;
 	or->in.total_bytes = bio->bi_iter.bi_size;
 	return 0;
@@ -842,7 +842,7 @@ int osd_req_write_kern(struct osd_request *or,
 	if (IS_ERR(bio))
 		return PTR_ERR(bio);
 
-	bio->bi_rw |= REQ_WRITE; /* FIXME: bio_set_dir() */
+	bio_set_op_attrs(bio, REQ_OP_WRITE, 0);
 	osd_req_write(or, obj, offset, bio, len);
 	return 0;
 }
@@ -959,7 +959,7 @@ static int _osd_req_finalize_cdb_cont(struct osd_request *or, const u8 *cap_key)
 	if (IS_ERR(bio))
 		return PTR_ERR(bio);
 
-	bio->bi_rw |= REQ_WRITE;
+	bio_set_op_attrs(bio, REQ_OP_WRITE, 0);
 
 	/* integrity check the continuation before the bio is linked
 	 * with the other data segments since the continuation
@@ -1080,7 +1080,7 @@ int osd_req_write_sg_kern(struct osd_request *or,
 	if (IS_ERR(bio))
 		return PTR_ERR(bio);
 
-	bio->bi_rw |= REQ_WRITE;
+	bio_set_op_attrs(bio, REQ_OP_WRITE, 0);
 	osd_req_write_sg(or, obj, bio, sglist, numentries);
 
 	return 0;
