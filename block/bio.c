@@ -687,17 +687,16 @@ struct bio *bio_clone_bioset(struct bio *bio_src, gfp_t gfp_mask,
 	bio = bio_alloc_bioset(gfp_mask, bio_segments(bio_src), bs);
 	if (!bio)
 		return NULL;
-
 	bio->bi_bdev		= bio_src->bi_bdev;
 	bio->bi_rw		= bio_src->bi_rw;
 	bio->bi_write_hint	= bio_src->bi_write_hint;
 	bio->bi_iter.bi_sector	= bio_src->bi_iter.bi_sector;
 	bio->bi_iter.bi_size	= bio_src->bi_iter.bi_size;
 
-	if (bio->bi_rw & REQ_DISCARD)
+	if (bio_op(bio) == REQ_OP_DISCARD)
 		goto integrity_clone;
 
-	if (bio->bi_rw & REQ_WRITE_SAME) {
+	if (bio_op(bio) == REQ_OP_WRITE_SAME) {
 		bio->bi_io_vec[bio->bi_vcnt++] = bio_src->bi_io_vec[0];
 		goto integrity_clone;
 	}
@@ -1200,7 +1199,7 @@ struct bio *bio_copy_user_iov(struct request_queue *q,
 		goto out_bmd;
 
 	if (iter->type & WRITE)
-		bio->bi_rw |= REQ_WRITE;
+		bio_set_op_attrs(bio, REQ_OP_WRITE, 0);
 
 	ret = 0;
 
@@ -1387,7 +1386,7 @@ struct bio *bio_map_user_iov(struct request_queue *q,
 	 * set data direction, and check if mapped pages need bouncing
 	 */
 	if (iter->type & WRITE)
-		bio->bi_rw |= REQ_WRITE;
+		bio_set_op_attrs(bio, REQ_OP_WRITE, 0);
 
 	bio_set_flag(bio, BIO_USER_MAPPED);
 
@@ -1578,7 +1577,7 @@ struct bio *bio_copy_kern(struct request_queue *q, void *data, unsigned int len,
 		bio->bi_private = data;
 	} else {
 		bio->bi_end_io = bio_copy_kern_endio;
-		bio->bi_rw |= REQ_WRITE;
+		bio_set_op_attrs(bio, REQ_OP_WRITE, 0);
 	}
 
 	return bio;
@@ -1839,7 +1838,7 @@ struct bio *bio_split(struct bio *bio, int sectors,
 	 * Discards need a mutable bio_vec to accommodate the payload
 	 * required by the DSM TRIM and UNMAP commands.
 	 */
-	if (bio->bi_rw & REQ_DISCARD)
+	if (bio_op(bio) == REQ_OP_DISCARD)
 		split = bio_clone_bioset(bio, gfp, bs);
 	else
 		split = bio_clone_fast(bio, gfp, bs);
