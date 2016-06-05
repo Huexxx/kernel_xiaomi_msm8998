@@ -2810,7 +2810,8 @@ static u8 mmc_blk_prep_packed_list(struct mmc_queue *mq, struct request *req)
 			break;
 		}
 
-		if (req_op(next) == REQ_OP_DISCARD || next->cmd_flags & REQ_FLUSH)
+		if (req_op(next) == REQ_OP_DISCARD ||
+		    req_op(next) == REQ_OP_FLUSH)
 			MMC_BLK_UPDATE_STOP_REASON(stats, FLUSH_OR_DISCARD);
 			break;
 		}
@@ -4122,7 +4123,6 @@ static int mmc_blk_issue_rq(struct mmc_queue *mq, struct request *req)
 	struct mmc_card *card = md->queue.card;
 	struct mmc_host *host = card->host;
 	unsigned long flags;
-	unsigned int cmd_flags = req ? req->cmd_flags : 0;
 	int err;
 
 	if (req && !mq->mqrq_prev->req) {
@@ -4167,7 +4167,8 @@ static int mmc_blk_issue_rq(struct mmc_queue *mq, struct request *req)
 			ret = mmc_blk_issue_secdiscard_rq(mq, req);
 		else
 			ret = mmc_blk_issue_discard_rq(mq, req);
-	} else if (cmd_flags & (REQ_FLUSH | REQ_BARRIER)) {
+		} else if ((req && req_op(req) == REQ_OP_FLUSH) ||
+			(cmd_flags & REQ_BARRIER)) {
 		/* complete ongoing async transfer before issuing flush */
 		if (card->host->areq)
 			mmc_blk_issue_rw_rq(mq, NULL);
