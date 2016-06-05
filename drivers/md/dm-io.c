@@ -278,8 +278,9 @@ static void km_dp_init(struct dpages *dp, void *data)
 /*-----------------------------------------------------------------
  * IO routines that accept a list of pages.
  *---------------------------------------------------------------*/
-static void do_region(int rw, unsigned region, struct dm_io_region *where,
-		      struct dpages *dp, struct io *io)
+static void do_region(int op, int op_flags, unsigned region,
+		      struct dm_io_region *where, struct dpages *dp,
+		      struct io *io)
 {
 	struct bio *bio;
 	struct page *page;
@@ -295,25 +296,26 @@ static void do_region(int rw, unsigned region, struct dm_io_region *where,
 	/*
 	 * Reject unsupported discard and write same requests.
 	 */
-	if (rw & REQ_DISCARD)
+	if (op == REQ_OP_DISCARD)
 		special_cmd_max_sectors = q->limits.max_discard_sectors;
-	else if (rw & REQ_WRITE_SAME)
+	else if (op == REQ_OP_WRITE_SAME)
 		special_cmd_max_sectors = q->limits.max_write_same_sectors;
-	if ((rw & (REQ_DISCARD | REQ_WRITE_SAME)) && special_cmd_max_sectors == 0) {
+	if ((op == REQ_OP_DISCARD || op == REQ_OP_WRITE_SAME) &&
+	    special_cmd_max_sectors == 0) {
 		atomic_inc(&io->count);
 		dec_count(io, region, -EOPNOTSUPP);
 		return;
 	}
 
 	/*
-	 * where->count may be zero if rw holds a flush and we need to
+	 * where->count may be zero if op holds a flush and we need to
 	 * send a zero-sized flush.
 	 */
 	do {
 		/*
 		 * Allocate a suitably sized-bio.
 		 */
-		if ((rw & REQ_DISCARD) || (rw & REQ_WRITE_SAME))
+		if ((op == REQ_OP_DISCARD) || (op == REQ_OP_WRITE_SAME))
 			num_bvecs = 1;
 		else
 			num_bvecs = min_t(int, BIO_MAX_PAGES,
@@ -323,14 +325,14 @@ static void do_region(int rw, unsigned region, struct dm_io_region *where,
 		bio->bi_iter.bi_sector = where->sector + (where->count - remaining);
 		bio->bi_bdev = where->bdev;
 		bio->bi_end_io = endio;
-		bio->bi_rw = rw;
+		bio_set_op_attrs(bio, op, op_flags);
 		store_io_and_region_in_bio(bio, io, region);
 
-		if (rw & REQ_DISCARD) {
+		if (op == REQ_OP_DISCARD) {
 			num_sectors = min_t(sector_t, special_cmd_max_sectors, remaining);
 			bio->bi_iter.bi_size = num_sectors << SECTOR_SHIFT;
 			remaining -= num_sectors;
-		} else if (rw & REQ_WRITE_SAME) {
+		} else if (op == REQ_OP_WRITE_SAME) {
 			/*
 			 * WRITE SAME only uses a single page.
 			 */
@@ -361,7 +363,7 @@ static void do_region(int rw, unsigned region, struct dm_io_region *where,
 	} while (remaining);
 }
 
-static void dispatch_io(int rw, unsigned int num_regions,
+static void dispatch_io(int op, int op_flags, unsigned int num_regions,
 			struct dm_io_region *where, struct dpages *dp,
 			struct io *io, int sync)
 {
@@ -371,7 +373,7 @@ static void dispatch_io(int rw, unsigned int num_regions,
 	BUG_ON(num_regions > DM_IO_MAX_REGIONS);
 
 	if (sync)
-		rw |= REQ_SYNC;
+		op_flags |= REQ_SYNC;
 
 	/*
 	 * For multiple regions we need to be careful to rewind
@@ -379,8 +381,8 @@ static void dispatch_io(int rw, unsigned int num_regions,
 	 */
 	for (i = 0; i < num_regions; i++) {
 		*dp = old_pages;
-		if (where[i].count || (rw & REQ_FLUSH))
-			do_region(rw, i, where + i, dp, io);
+		if (where[i].count || (op_flags & REQ_FLUSH))
+			do_region(op, op_flags, i, where + i, dp, io);
 	}
 
 	/*
@@ -404,13 +406,13 @@ static void sync_io_complete(unsigned long error, void *context)
 }
 
 static int sync_io(struct dm_io_client *client, unsigned int num_regions,
-		   struct dm_io_region *where, int rw, struct dpages *dp,
-		   unsigned long *error_bits)
+		   struct dm_io_region *where, int op, int op_flags,
+		   struct dpages *dp, unsigned long *error_bits)
 {
 	struct io *io;
 	struct sync_io sio;
 
-	if (num_regions > 1 && !op_is_write(rw)) {
+	if (num_regions > 1 && !op_is_write(op)) {
 		WARN_ON(1);
 		return -EIO;
 	}
@@ -427,7 +429,7 @@ static int sync_io(struct dm_io_client *client, unsigned int num_regions,
 	io->vma_invalidate_address = dp->vma_invalidate_address;
 	io->vma_invalidate_size = dp->vma_invalidate_size;
 
-	dispatch_io(rw, num_regions, where, dp, io, 1);
+	dispatch_io(op, op_flags, num_regions, where, dp, io, 1);
 
 	wait_for_completion_io(&sio.wait);
 
@@ -438,12 +440,12 @@ static int sync_io(struct dm_io_client *client, unsigned int num_regions,
 }
 
 static int async_io(struct dm_io_client *client, unsigned int num_regions,
-		    struct dm_io_region *where, int rw, struct dpages *dp,
-		    io_notify_fn fn, void *context)
+		    struct dm_io_region *where, int op, int op_flags,
+		    struct dpages *dp, io_notify_fn fn, void *context)
 {
 	struct io *io;
 
-	if (num_regions > 1 && !op_is_write(rw)) {
+	if (num_regions > 1 && !op_is_write(op)) {
 		WARN_ON(1);
 		fn(1, context);
 		return -EIO;
@@ -459,7 +461,7 @@ static int async_io(struct dm_io_client *client, unsigned int num_regions,
 	io->vma_invalidate_address = dp->vma_invalidate_address;
 	io->vma_invalidate_size = dp->vma_invalidate_size;
 
-	dispatch_io(rw, num_regions, where, dp, io, 0);
+	dispatch_io(op, op_flags, num_regions, where, dp, io, 0);
 	return 0;
 }
 
@@ -482,7 +484,7 @@ static int dp_init(struct dm_io_request *io_req, struct dpages *dp,
 
 	case DM_IO_VMA:
 		flush_kernel_vmap_range(io_req->mem.ptr.vma, size);
-		if ((io_req->bi_rw & RW_MASK) == READ) {
+		if (io_req->bi_op == REQ_OP_READ) {
 			dp->vma_invalidate_address = io_req->mem.ptr.vma;
 			dp->vma_invalidate_size = size;
 		}
@@ -520,10 +522,12 @@ int dm_io(struct dm_io_request *io_req, unsigned num_regions,
 
 	if (!io_req->notify.fn)
 		return sync_io(io_req->client, num_regions, where,
-			       io_req->bi_rw, &dp, sync_error_bits);
+			       io_req->bi_op, io_req->bi_op_flags, &dp,
+			       sync_error_bits);
 
-	return async_io(io_req->client, num_regions, where, io_req->bi_rw,
-			&dp, io_req->notify.fn, io_req->notify.context);
+	return async_io(io_req->client, num_regions, where, io_req->bi_op,
+			io_req->bi_op_flags, &dp, io_req->notify.fn,
+			io_req->notify.context);
 }
 EXPORT_SYMBOL(dm_io);
 
