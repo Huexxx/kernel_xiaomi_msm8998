@@ -423,7 +423,7 @@ static void md_submit_flush_data(struct work_struct *ws)
 		/* an empty barrier - all done */
 		bio_endio(bio);
 	else {
-		bio->bi_rw &= ~REQ_FLUSH;
+		bio->bi_rw &= ~REQ_PREFLUSH;
 		mddev->pers->make_request(mddev, bio);
 	}
 
@@ -5069,7 +5069,7 @@ static int md_alloc(dev_t dev, char *name)
 	disk->fops = &md_fops;
 	disk->private_data = mddev;
 	disk->queue = mddev->queue;
-	blk_queue_flush(mddev->queue, REQ_FLUSH | REQ_FUA);
+	blk_queue_flush(mddev->queue, REQ_PREFLUSH | REQ_FUA);
 	/* Allow extended partitions.  This makes the
 	 * 'mdp' device redundant, but we can't really
 	 * remove it now.

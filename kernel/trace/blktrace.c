@@ -212,6 +212,7 @@ static const u32 ddir_act[2] = { BLK_TC_ACT(BLK_TC_READ),
 				 BLK_TC_ACT(BLK_TC_WRITE) };
 
 #define BLK_TC_RAHEAD		BLK_TC_AHEAD
+#define BLK_TC_PREFLUSH		BLK_TC_FLUSH
 
 /* The ilog2() calls fall out because they're constant */
 #define MASK_TC_BIT(rw, __name) ((rw & REQ_ ## __name) << \
@@ -243,7 +244,7 @@ static void __blk_add_trace(struct blk_trace *bt, sector_t sector, int bytes,
 	what |= MASK_TC_BIT(op_flags, SYNC);
 	what |= MASK_TC_BIT(op_flags, RAHEAD);
 	what |= MASK_TC_BIT(op_flags, META);
-	what |= MASK_TC_BIT(op_flags, FLUSH);
+	what |= MASK_TC_BIT(op_flags, PREFLUSH);
 	what |= MASK_TC_BIT(op_flags, FUA);
 	if (op == REQ_OP_DISCARD)
 		what |= BLK_TC_ACT(BLK_TC_DISCARD);
@@ -2076,7 +2077,7 @@ void blk_fill_rwbs(char *rwbs, int op, u32 rw, int bytes)
 {
 	int i = 0;
 
-	if (rw & REQ_FLUSH)
+	if (rw & REQ_PREFLUSH)
 		rwbs[i++] = 'F';
 
 	switch (op) {

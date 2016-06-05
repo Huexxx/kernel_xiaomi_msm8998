@@ -1524,8 +1524,8 @@ void dm_table_set_restrictions(struct dm_table *t, struct request_queue *q,
 	else
 		queue_flag_set_unlocked(QUEUE_FLAG_DISCARD, q);
 
-	if (dm_table_supports_flush(t, REQ_FLUSH)) {
-		flush |= REQ_FLUSH;
+	if (dm_table_supports_flush(t, REQ_OP_FLUSH)) {
+		flush |= REQ_OP_FLUSH;
 		if (dm_table_supports_flush(t, REQ_FUA))
 			flush |= REQ_FUA;
 	}
