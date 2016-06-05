@@ -213,6 +213,13 @@ struct request {
 	int			lat_hist_enabled;
 };
 
+#define req_op(req)		(op_from_rq_bits((req)->cmd_flags))
+#define req_set_op(req, op)	((req)->cmd_flags |= op)
+#define req_set_op_attrs(req, op, flags) do {	\
+	req_set_op(req, op);			\
+	(req)->cmd_flags |= flags;		\
+} while (0)
+
 static inline bool blk_rq_is_passthrough(struct request *rq)
 {
 	return rq->cmd_type != REQ_TYPE_FS;
@@ -620,7 +627,8 @@ static inline bool blk_account_rq(struct request *rq)
 
 #define list_entry_rq(ptr)	list_entry((ptr), struct request, queuelist)
 
-#define rq_data_dir(rq)		((int)((rq)->cmd_flags & 1))
+#define rq_data_dir(rq) \
+	(op_is_write(op_from_rq_bits(rq->cmd_flags)) ? WRITE : READ)
 
 /*
  * Driver can handle struct request, if it either has an old style
