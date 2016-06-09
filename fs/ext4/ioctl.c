@@ -757,7 +757,7 @@ resizefs_out:
 		if (!blk_queue_discard(q))
 			return -EOPNOTSUPP;
 
-		if ((flags & BLKDEV_DISCARD_SECURE) && !blk_queue_secdiscard(q))
+		if ((flags & BLKDEV_DISCARD_SECURE) && !blk_queue_secure_erase(q))
 			return -EOPNOTSUPP;
 
 		/*
