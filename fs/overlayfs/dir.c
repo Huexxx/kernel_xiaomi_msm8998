@@ -161,6 +161,16 @@ static int ovl_dir_getattr(struct vfsmount *mnt, struct dentry *dentry,
 	return 0;
 }
 
+/* Common operations required to be done after creation of file on upper */
+static void ovl_instantiate(struct dentry *dentry, struct inode *inode,
+			    struct dentry *newdentry)
+{
+	ovl_dentry_version_inc(dentry->d_parent);
+	ovl_dentry_update(dentry, newdentry);
+	ovl_copyattr(newdentry->d_inode, inode);
+	d_instantiate(dentry, inode);
+}
+
 static int ovl_create_upper(struct dentry *dentry, struct inode *inode,
 			    struct kstat *stat, const char *link,
 			    struct dentry *hardlink)
@@ -180,10 +190,7 @@ static int ovl_create_upper(struct dentry *dentry, struct inode *inode,
 	if (err)
 		goto out_dput;
 
-	ovl_dentry_version_inc(dentry->d_parent);
-	ovl_dentry_update(dentry, newdentry);
-	ovl_copyattr(newdentry->d_inode, inode);
-	d_instantiate(dentry, inode);
+	ovl_instantiate(dentry, inode, newdentry);
 	newdentry = NULL;
 out_dput:
 	dput(newdentry);
@@ -366,10 +373,7 @@ static int ovl_create_over_whiteout(struct dentry *dentry, struct inode *inode,
 		if (err)
 			goto out_cleanup;
 	}
-	ovl_dentry_version_inc(dentry->d_parent);
-	ovl_dentry_update(dentry, newdentry);
-	ovl_copyattr(newdentry->d_inode, inode);
-	d_instantiate(dentry, inode);
+	ovl_instantiate(dentry, inode, newdentry);
 	newdentry = NULL;
 out_dput2:
 	dput(upper);
