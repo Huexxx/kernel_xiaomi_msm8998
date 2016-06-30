@@ -136,8 +136,7 @@ struct dentry_operations {
 	char *(*d_dname)(struct dentry *, char *, int);
 	struct vfsmount *(*d_automount)(struct path *);
 	int (*d_manage)(struct dentry *, bool);
-	struct inode *(*d_select_inode)(struct dentry *, unsigned);
-	struct dentry *(*d_real)(struct dentry *, struct inode *);
+	struct dentry *(*d_real)(struct dentry *, const struct inode *, unsigned int);
 	void (*d_canonical_path)(const struct path *, struct path *);
 } ____cacheline_aligned;
 
@@ -204,9 +203,8 @@ struct dentry_operations {
 
 #define DCACHE_MAY_FREE			0x00800000
 #define DCACHE_FALLTHRU			0x01000000 /* Fall through to lower layer */
-#define DCACHE_OP_SELECT_INODE		0x02000000 /* Unioned entry: dcache op selects inode */
-#define DCACHE_ENCRYPTED_WITH_KEY	0x04000000 /* dir is encrypted with a valid key */
-#define DCACHE_OP_REAL			0x08000000
+#define DCACHE_ENCRYPTED_WITH_KEY	0x02000000 /* dir is encrypted with a valid key */
+#define DCACHE_OP_REAL			0x04000000
 
 extern seqlock_t rename_lock;
 
@@ -562,23 +560,14 @@ static inline struct dentry *d_backing_dentry(struct dentry *upper)
 	return upper;
 }
 
-static inline struct dentry *d_real(struct dentry *dentry)
+static inline struct dentry *d_real(struct dentry *dentry,
+				    const struct inode *inode,
+				    unsigned int flags)
 {
 	if (unlikely(dentry->d_flags & DCACHE_OP_REAL))
-		return dentry->d_op->d_real(dentry, NULL);
+		return dentry->d_op->d_real(dentry, inode, flags);
 	else
 		return dentry;
-}
-
-static inline struct inode *vfs_select_inode(struct dentry *dentry,
-					     unsigned open_flags)
-{
-	struct inode *inode = d_inode(dentry);
-
-	if (inode && unlikely(dentry->d_flags & DCACHE_OP_SELECT_INODE))
-		inode = dentry->d_op->d_select_inode(dentry, open_flags);
-
-	return inode;
 }
 
 /**
@@ -591,7 +580,7 @@ static inline struct inode *vfs_select_inode(struct dentry *dentry,
 static inline struct inode *d_real_inode(const struct dentry *dentry)
 {
 	/* This usage of d_real() results in const dentry */
-	return d_backing_inode(d_real((struct dentry *) dentry));
+	return d_backing_inode(d_real((struct dentry *) dentry, NULL, 0));
 }
 
 struct name_snapshot {
