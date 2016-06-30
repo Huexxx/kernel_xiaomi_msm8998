@@ -212,7 +212,7 @@ static int quota_getquota(struct super_block *sb, int type, qid_t id,
 	if (!sb->s_qcop->get_dqblk)
 		return -ENOSYS;
 	qid = make_kqid(current_user_ns(), type, id);
-	if (!qid_valid(qid))
+	if (!qid_has_mapping(sb->s_user_ns, qid))
 		return -EINVAL;
 	ret = sb->s_qcop->get_dqblk(sb, qid, &fdq);
 	if (ret)
@@ -238,7 +238,7 @@ static int quota_getnextquota(struct super_block *sb, int type, qid_t id,
 	if (!sb->s_qcop->get_nextdqblk)
 		return -ENOSYS;
 	qid = make_kqid(current_user_ns(), type, id);
-	if (!qid_valid(qid))
+	if (!qid_has_mapping(sb->s_user_ns, qid))
 		return -EINVAL;
 	ret = sb->s_qcop->get_nextdqblk(sb, &qid, &fdq);
 	if (ret)
@@ -289,7 +289,7 @@ static int quota_setquota(struct super_block *sb, int type, qid_t id,
 	if (!sb->s_qcop->set_dqblk)
 		return -ENOSYS;
 	qid = make_kqid(current_user_ns(), type, id);
-	if (!qid_valid(qid))
+	if (!qid_has_mapping(sb->s_user_ns, qid))
 		return -EINVAL;
 	copy_from_if_dqblk(&fdq, &idq);
 	return sb->s_qcop->set_dqblk(sb, qid, &fdq);
@@ -582,7 +582,7 @@ static int quota_setxquota(struct super_block *sb, int type, qid_t id,
 	if (!sb->s_qcop->set_dqblk)
 		return -ENOSYS;
 	qid = make_kqid(current_user_ns(), type, id);
-	if (!qid_valid(qid))
+	if (!qid_has_mapping(sb->s_user_ns, qid))
 		return -EINVAL;
 	/* Are we actually setting timer / warning limits for all users? */
 	if (from_kqid(&init_user_ns, qid) == 0 &&
@@ -643,7 +643,7 @@ static int quota_getxquota(struct super_block *sb, int type, qid_t id,
 	if (!sb->s_qcop->get_dqblk)
 		return -ENOSYS;
 	qid = make_kqid(current_user_ns(), type, id);
-	if (!qid_valid(qid))
+	if (!qid_has_mapping(sb->s_user_ns, qid))
 		return -EINVAL;
 	ret = sb->s_qcop->get_dqblk(sb, qid, &qdq);
 	if (ret)
@@ -670,7 +670,7 @@ static int quota_getnextxquota(struct super_block *sb, int type, qid_t id,
 	if (!sb->s_qcop->get_nextdqblk)
 		return -ENOSYS;
 	qid = make_kqid(current_user_ns(), type, id);
-	if (!qid_valid(qid))
+	if (!qid_has_mapping(sb->s_user_ns, qid))
 		return -EINVAL;
 	ret = sb->s_qcop->get_nextdqblk(sb, &qid, &qdq);
 	if (ret)
