@@ -41,6 +41,7 @@ int ovl_setattr(struct dentry *dentry, struct iattr *attr)
 {
 	int err;
 	struct dentry *upperdentry;
+	const struct cred *old_cred;
 
 	/*
 	 * Check for permissions before trying to copy-up.  This is redundant
@@ -81,7 +82,9 @@ int ovl_setattr(struct dentry *dentry, struct iattr *attr)
 		}
 
 		inode_lock(upperdentry->d_inode);
+		old_cred = ovl_override_creds(dentry->d_sb);
 		err = notify_change(upperdentry, attr, NULL);
+		revert_creds(old_cred);
 		if (!err)
 			ovl_copyattr(upperdentry->d_inode, dentry->d_inode);
 		inode_unlock(upperdentry->d_inode);
@@ -99,9 +102,14 @@ static int ovl_getattr(struct vfsmount *mnt, struct dentry *dentry,
 			 struct kstat *stat)
 {
 	struct path realpath;
+	const struct cred *old_cred;
+	int err;
 
 	ovl_path_real(dentry, &realpath);
-	return vfs_getattr(&realpath, stat);
+	old_cred = ovl_override_creds(dentry->d_sb);
+	err = vfs_getattr(&realpath, stat);
+	revert_creds(old_cred);
+	return err;
 }
 
 int ovl_permission(struct inode *inode, int mask)
@@ -185,6 +193,8 @@ static const char *ovl_get_link(struct dentry *dentry,
 {
 	struct dentry *realdentry;
 	struct inode *realinode;
+	const struct cred *old_cred;
+	const char *p;
 
 	if (!dentry)
 		return ERR_PTR(-ECHILD);
@@ -195,13 +205,18 @@ static const char *ovl_get_link(struct dentry *dentry,
 	if (WARN_ON(!realinode->i_op->get_link))
 		return ERR_PTR(-EPERM);
 
-	return realinode->i_op->get_link(realdentry, realinode, done);
+	old_cred = ovl_override_creds(dentry->d_sb);
+	p = realinode->i_op->get_link(realdentry, realinode, done);
+	revert_creds(old_cred);
+	return p;
 }
 
 static int ovl_readlink(struct dentry *dentry, char __user *buf, int bufsiz)
 {
 	struct path realpath;
 	struct inode *realinode;
+	const struct cred *old_cred;
+	int err;
 
 	ovl_path_real(dentry, &realpath);
 	realinode = realpath.dentry->d_inode;
@@ -211,9 +226,11 @@ static int ovl_readlink(struct dentry *dentry, char __user *buf, int bufsiz)
 
 	touch_atime(&realpath);
 
-	return realinode->i_op->readlink(realpath.dentry, buf, bufsiz);
+	old_cred = ovl_override_creds(dentry->d_sb);
+	err = realinode->i_op->readlink(realpath.dentry, buf, bufsiz);
+	revert_creds(old_cred);
+	return err;
 }
-
 
 bool ovl_is_private_xattr(const char *name)
 {
@@ -226,6 +243,7 @@ int ovl_setxattr(struct dentry *dentry, struct inode *inode,
 {
 	int err;
 	struct dentry *upperdentry;
+	const struct cred *old_cred;
 
 	err = ovl_want_write(dentry);
 	if (err)
@@ -240,7 +258,9 @@ int ovl_setxattr(struct dentry *dentry, struct inode *inode,
 		goto out_drop_write;
 
 	upperdentry = ovl_dentry_upper(dentry);
+	old_cred = ovl_override_creds(dentry->d_sb);
 	err = vfs_setxattr(upperdentry, name, value, size, flags);
+	revert_creds(old_cred);
 
 out_drop_write:
 	ovl_drop_write(dentry);
@@ -252,11 +272,16 @@ ssize_t ovl_getxattr(struct dentry *dentry, struct inode *inode,
 		     const char *name, void *value, size_t size)
 {
 	struct dentry *realdentry = ovl_dentry_real(dentry);
+	ssize_t res;
+	const struct cred *old_cred;
 
 	if (ovl_is_private_xattr(name))
 		return -ENODATA;
 
-	return vfs_getxattr(realdentry, name, value, size);
+	old_cred = ovl_override_creds(dentry->d_sb);
+	res = vfs_getxattr(realdentry, name, value, size);
+	revert_creds(old_cred);
+	return res;
 }
 
 static bool ovl_can_list(const char *s)
@@ -275,8 +300,11 @@ ssize_t ovl_listxattr(struct dentry *dentry, char *list, size_t size)
 	ssize_t res;
 	size_t len;
 	char *s;
+	const struct cred *old_cred;
 
+	old_cred = ovl_override_creds(dentry->d_sb);
 	res = vfs_listxattr(realdentry, list, size);
+	revert_creds(old_cred);
 	if (res <= 0 || size == 0)
 		return res;
 
@@ -305,6 +333,7 @@ int ovl_removexattr(struct dentry *dentry, const char *name)
 	int err;
 	struct path realpath;
 	enum ovl_path_type type = ovl_path_real(dentry, &realpath);
+	const struct cred *old_cred;
 
 	err = ovl_want_write(dentry);
 	if (err)
@@ -326,7 +355,9 @@ int ovl_removexattr(struct dentry *dentry, const char *name)
 		ovl_path_upper(dentry, &realpath);
 	}
 
+	old_cred = ovl_override_creds(dentry->d_sb);
 	err = vfs_removexattr(realpath.dentry, name);
+	revert_creds(old_cred);
 out_drop_write:
 	ovl_drop_write(dentry);
 out:
@@ -336,6 +367,8 @@ out:
 struct posix_acl *ovl_get_acl(struct inode *inode, int type)
 {
 	struct inode *realinode = ovl_inode_real(inode);
+	const struct cred *old_cred;
+	struct posix_acl *acl;
 
 	if (!IS_POSIXACL(realinode))
 		return NULL;
@@ -343,7 +376,11 @@ struct posix_acl *ovl_get_acl(struct inode *inode, int type)
 	if (!realinode->i_op->get_acl)
 		return NULL;
 
-	return realinode->i_op->get_acl(realinode, type);
+	old_cred = ovl_override_creds(inode->i_sb);
+	acl = realinode->i_op->get_acl(realinode, type);
+	revert_creds(old_cred);
+
+	return acl;
 }
 
 static bool ovl_open_need_copy_up(int flags, enum ovl_path_type type,
