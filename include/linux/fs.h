@@ -195,9 +195,6 @@ typedef void (dax_iodone_t)(struct buffer_head *bh_map, int uptodate);
  * READ_SYNC		A synchronous read. Device is not plugged, caller can
  *			immediately wait on this read without caring about
  *			unplugging.
- * READA		Used for read-ahead operations. Lower priority, and the
- *			block layer could (in theory) choose to ignore this
- *			request if it runs into resource problems.
  * WRITE		A normal async write. Device will be plugged.
  * WRITE_SYNC		Synchronous write. Identical to WRITE, but passes down
  *			the hint that someone will be waiting on this IO
@@ -212,11 +209,9 @@ typedef void (dax_iodone_t)(struct buffer_head *bh_map, int uptodate);
  *
  */
 #define RW_MASK			REQ_OP_WRITE
-#define RWA_MASK		REQ_RAHEAD
 
 #define READ			REQ_OP_READ
-#define WRITE			RW_MASK
-#define READA			RWA_MASK
+#define WRITE			REQ_OP_WRITE
 
 #define READ_SYNC		REQ_SYNC
 #define WRITE_SYNC		(REQ_SYNC | REQ_NOIDLE)
@@ -2648,17 +2643,6 @@ extern int is_bad_inode(struct inode *);
 static inline bool op_is_write(unsigned int op)
 {
 	return op == REQ_OP_READ ? false : true;
-}
-
-/*
- * return READ, READA, or WRITE
- */
-static inline int bio_rw(struct bio *bio)
-{
-	if (op_is_write(bio_op(bio)))
-		return WRITE;
-
-	return bio->bi_opf & RWA_MASK;
 }
 
 /*

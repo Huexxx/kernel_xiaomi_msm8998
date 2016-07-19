@@ -1109,7 +1109,7 @@ static void make_request(struct mddev *mddev, struct bio * bio)
 	bitmap = mddev->bitmap;
 
 	/*
-	 * make_request() can abort the operation when READA is being
+	 * make_request() can abort the operation when read-ahead is being
 	 * used and no empty request is available.
 	 *
 	 */

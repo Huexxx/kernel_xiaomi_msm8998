@@ -62,7 +62,7 @@ TRACE_DEFINE_ENUM(EX_BLOCK_AGE);
 		{ IPU,		"IN-PLACE" },				\
 		{ OPU,		"OUT-OF-PLACE" })
 
-#define F2FS_BIO_MASK(t)	(t & (READA | WRITE_FLUSH_FUA))
+#define F2FS_BIO_MASK(t)	(t & (REQ_RAHEAD | WRITE_FLUSH_FUA))
 #define F2FS_BIO_EXTRA_MASK(t)	(t & (REQ_META | REQ_PRIO))
 
 #define show_bio_type(op, op_flags)					\
@@ -71,7 +71,7 @@ TRACE_DEFINE_ENUM(EX_BLOCK_AGE);
 #define show_bio_base(type)						\
 	__print_symbolic(F2FS_BIO_MASK(type),				\
 		{ READ, 		"READ" },			\
-		{ READA, 		"READAHEAD" },			\
+		{ REQ_RAHEAD, 		"READAHEAD" },			\
 		{ READ_SYNC, 		"READ_SYNC" },			\
 		{ WRITE, 		"WRITE" },			\
 		{ WRITE_SYNC, 		"WRITE_SYNC" },			\
