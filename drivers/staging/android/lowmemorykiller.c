@@ -228,10 +228,10 @@ static void lmk_event_init(void)
 static unsigned long lowmem_count(struct shrinker *s,
 				  struct shrink_control *sc)
 {
-	return global_page_state(NR_ACTIVE_ANON) +
-		global_page_state(NR_ACTIVE_FILE) +
-		global_page_state(NR_INACTIVE_ANON) +
-		global_page_state(NR_INACTIVE_FILE);
+	return global_node_page_state(NR_ACTIVE_ANON) +
+		global_node_page_state(NR_ACTIVE_FILE) +
+		global_node_page_state(NR_INACTIVE_ANON) +
+		global_node_page_state(NR_INACTIVE_FILE);
 }
 
 static atomic_t shift_adj = ATOMIC_INIT(0);
