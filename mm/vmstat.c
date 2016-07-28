@@ -938,10 +938,6 @@ const char * const vmstat_text[] = {
 	"nr_kernel_stack",
 	"nr_overhead",
 	"nr_bounce",
-	"nr_vmscan_write",
-	"nr_vmscan_immediate_reclaim",
-	"nr_dirtied",
-	"nr_written",
 #ifdef CONFIG_NUMA
 	"numa_hit",
 	"numa_miss",
@@ -975,6 +971,10 @@ const char * const vmstat_text[] = {
 	"nr_shmem",
 	"nr_anon_transparent_hugepages",
 	"nr_unstable",
+	"nr_vmscan_write",
+	"nr_vmscan_immediate_reclaim",
+	"nr_dirtied",
+	"nr_written",
 
 	/* enum writeback_stat_item counters */
 	"nr_dirty_threshold",
