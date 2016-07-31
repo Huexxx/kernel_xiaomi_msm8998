@@ -2033,7 +2033,7 @@ static inline bool d_same_name(const struct dentry *dentry,
 			return false;
 		return dentry_cmp(dentry, name->name, name->len) == 0;
 	}
-	return parent->d_op->d_compare(parent, dentry,
+	return parent->d_op->d_compare(dentry,
 				       dentry->d_name.len, dentry->d_name.name,
 				       name) == 0;
 }
@@ -2136,7 +2136,7 @@ seqretry:
 				cpu_relax();
 				goto seqretry;
 			}
-			if (parent->d_op->d_compare(parent, dentry,
+			if (parent->d_op->d_compare(dentry,
 						    tlen, tname, name) != 0)
 				continue;
 		} else {
@@ -2442,7 +2442,7 @@ retry:
 		if (parent->d_flags & DCACHE_OP_COMPARE) {
 			int tlen = dentry->d_name.len;
 			const char *tname = dentry->d_name.name;
-			if (parent->d_op->d_compare(parent, dentry, tlen, tname, name))
+			if (parent->d_op->d_compare(dentry, tlen, tname, name))
 				continue;
 		} else {
 			if (dentry->d_name.len != len)
@@ -2470,7 +2470,7 @@ retry:
 		if (parent->d_flags & DCACHE_OP_COMPARE) {
 			int tlen = dentry->d_name.len;
 			const char *tname = dentry->d_name.name;
-			if (parent->d_op->d_compare(parent, dentry, tlen, tname, name))
+			if (parent->d_op->d_compare(dentry, tlen, tname, name))
 				goto mismatch;
 		} else {
 			if (unlikely(dentry->d_name.len != len))
