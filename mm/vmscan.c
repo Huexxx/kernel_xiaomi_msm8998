@@ -2569,7 +2569,7 @@ static bool shrink_node(pg_data_t *pgdat, struct scan_control *sc,
 			shrink_lruvec(lruvec, swappiness, sc, &lru_pages);
 			zone_lru_pages += lru_pages;
 
-			if (!global_reclaim(sc))
+			if (memcg)
 				shrink_slab(sc->gfp_mask, zone_to_nid(zone),
 					    memcg, sc->nr_scanned - scanned,
 					    lru_pages);

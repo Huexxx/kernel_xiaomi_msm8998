@@ -978,14 +978,10 @@ static void free_pcppages_bulk(struct zone *zone, int count,
 {
 	int migratetype = 0;
 	int batch_free = 0;
-	unsigned long nr_scanned;
 	bool isolated_pageblocks;
 
 	spin_lock(&zone->lock);
 	isolated_pageblocks = has_isolate_pageblock(zone);
-	nr_scanned = node_page_state(zone->zone_pgdat, NR_PAGES_SCANNED);
-	if (nr_scanned)
-		__mod_node_page_state(zone->zone_pgdat, NR_PAGES_SCANNED, -nr_scanned);
 
 	/*
 	 * Ensure proper count is passed which otherwise would stuck in the
@@ -1041,12 +1037,7 @@ static void free_one_page(struct zone *zone,
 				unsigned int order,
 				int migratetype)
 {
-	unsigned long nr_scanned;
 	spin_lock(&zone->lock);
-	nr_scanned = node_page_state(zone->zone_pgdat, NR_PAGES_SCANNED);
-	if (nr_scanned)
-		__mod_node_page_state(zone->zone_pgdat, NR_PAGES_SCANNED, -nr_scanned);
-
 	if (unlikely(has_isolate_pageblock(zone) ||
 		is_migrate_isolate(migratetype))) {
 		migratetype = get_pfnblock_migratetype(page, pfn);
