@@ -116,6 +116,7 @@ extern int vfs_open(const struct path *, struct file *, const struct cred *);
  */
 extern long prune_icache_sb(struct super_block *sb, struct shrink_control *sc);
 extern void inode_add_lru(struct inode *inode);
+extern int dentry_needs_remove_privs(struct dentry *dentry);
 
 extern bool __atime_needs_update(const struct path *, struct inode *, bool);
 static inline bool atime_needs_update_rcu(const struct path *path,
