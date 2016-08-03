@@ -1769,7 +1769,6 @@ int dentry_needs_remove_privs(struct dentry *dentry)
 		mask |= ATTR_KILL_PRIV;
 	return mask;
 }
-EXPORT_SYMBOL(dentry_needs_remove_privs);
 
 static int __remove_privs(struct vfsmount *mnt, struct dentry *dentry, int kill)
 {
