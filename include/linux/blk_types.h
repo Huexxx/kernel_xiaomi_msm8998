@@ -18,6 +18,17 @@ struct cgroup_subsys_state;
 typedef void (bio_end_io_t) (struct bio *);
 typedef void (bio_destructor_t) (struct bio *);
 
+enum req_op {
+	REQ_OP_READ,
+	REQ_OP_WRITE,
+	REQ_OP_DISCARD,		/* request to discard sectors */
+	REQ_OP_SECURE_ERASE,	/* request to securely erase sectors */
+	REQ_OP_WRITE_SAME,	/* write same block many times */
+	REQ_OP_FLUSH,		/* request for cache flush */
+};
+
+#define REQ_OP_BITS 3
+
 #ifdef CONFIG_BLOCK
 #ifdef CONFIG_BLOCK_PERF_FRAMEWORK
 /* Double declaration from ktime.h so as to not break the include dependency
@@ -277,17 +288,6 @@ enum rq_flag_bits {
 #define REQ_HASHED		(1ULL << __REQ_HASHED)
 #define REQ_MQ_INFLIGHT		(1ULL << __REQ_MQ_INFLIGHT)
 #define REQ_NO_TIMEOUT		(1ULL << __REQ_NO_TIMEOUT)
-
-enum req_op {
-	REQ_OP_READ,
-	REQ_OP_WRITE,
-	REQ_OP_DISCARD,		/* request to discard sectors */
-	REQ_OP_SECURE_ERASE,	/* request to securely erase sectors */
-	REQ_OP_WRITE_SAME,	/* write same block many times */
-	REQ_OP_FLUSH,		/* request for cache flush */
-};
-
-#define REQ_OP_BITS 3
 
 typedef unsigned int blk_qc_t;
 #define BLK_QC_T_NONE	-1U
