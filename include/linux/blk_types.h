@@ -38,8 +38,9 @@ struct bio {
 	unsigned int		bi_flags;	/* status, command, etc */
 	unsigned short		bi_write_hint;
 	int			bi_error;
-	unsigned int		bi_rw;		/* bottom bits req flags,
-						 * top bits REQ_OP
+	unsigned int		bi_opf;		/* bottom bits req flags,
+						 * top bits REQ_OP. Use
+						 * accessors.
 						 */
 	unsigned short		bi_ioprio;
 
@@ -118,14 +119,14 @@ struct bio {
 };
 
 #define BIO_OP_SHIFT	(8 * sizeof(unsigned int) - REQ_OP_BITS)
-#define bio_flags(bio) ((bio)->bi_rw & ((1 << BIO_OP_SHIFT) - 1))
-#define bio_op(bio)	((bio)->bi_rw >> BIO_OP_SHIFT)
+#define bio_flags(bio) ((bio)->bi_opf & ((1 << BIO_OP_SHIFT) - 1))
+#define bio_op(bio)	((bio)->bi_opf >> BIO_OP_SHIFT)
 
 #define bio_set_op_attrs(bio, op, op_flags) do {		\
 	WARN_ON(op >= (1 << REQ_OP_BITS));			\
-	(bio)->bi_rw = bio_flags(bio);			\
-	(bio)->bi_rw |= ((unsigned int) (op) << BIO_OP_SHIFT);	\
-	(bio)->bi_rw |= op_flags;				\
+	(bio)->bi_opf = bio_flags(bio);			\
+	(bio)->bi_opf |= ((unsigned int) (op) << BIO_OP_SHIFT);	\
+	(bio)->bi_opf |= op_flags;				\
 } while (0)
 
 #define BIO_RESET_BYTES		offsetof(struct bio, bi_max_vecs)
@@ -169,7 +170,7 @@ struct bio {
 
 /*
  * Request flags.  For use in the cmd_flags field of struct request, and in
- * bi_rw of struct bio.  Note that some flags are only valid in either one.
+ * bi_opf of struct bio.  Note that some flags are only valid in either one.
  */
 enum rq_flag_bits {
 	/* common flags */

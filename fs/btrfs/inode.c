@@ -8180,7 +8180,7 @@ static void btrfs_end_dio_bio(struct bio *bio)
 	if (err)
 		btrfs_warn(BTRFS_I(dip->inode)->root->fs_info,
 			   "direct IO failed ino %llu rw %d,%u sector %#Lx len %u err no %d",
-			   btrfs_ino(dip->inode), bio_op(bio), bio->bi_rw,
+			   btrfs_ino(dip->inode), bio_op(bio), bio->bi_opf,
 			   (unsigned long long)bio->bi_iter.bi_sector,
 			   bio->bi_iter.bi_size, err);
 
@@ -8464,7 +8464,7 @@ static void btrfs_submit_direct(struct bio *dio_bio, struct inode *inode,
 		dip->subio_endio = btrfs_subio_endio_read;
 	}
 
-	ret = btrfs_submit_direct_hook(dio_bio->bi_rw, dip, skip_sum);
+	ret = btrfs_submit_direct_hook(dio_bio->bi_opf, dip, skip_sum);
 	if (!ret)
 		return;
 

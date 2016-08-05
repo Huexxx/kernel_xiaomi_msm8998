@@ -308,7 +308,7 @@ int __swap_writepage(struct page *page, struct writeback_control *wbc,
 	}
 	bio_set_op_attrs(bio, REQ_OP_WRITE, 0);
 	if (wbc->sync_mode == WB_SYNC_ALL)
-		bio->bi_rw |= REQ_SYNC;
+		bio->bi_opf |= REQ_SYNC;
 	count_vm_event(PSWPOUT);
 	set_page_writeback(page);
 	unlock_page(page);

@@ -604,7 +604,7 @@ static int __submit_flush_wait(struct f2fs_sb_info *sbi,
 	if (!bio)
 		return -ENOMEM;
 
-	bio->bi_rw = REQ_OP_WRITE;
+	bio->bi_opf = REQ_OP_WRITE;
 	bio->bi_bdev = bdev;
 	ret = submit_bio_wait(bio);
 	bio_put(bio);
@@ -1238,7 +1238,7 @@ submit:
 
 		bio->bi_private = dc;
 		bio->bi_end_io = f2fs_submit_discard_endio;
-		bio->bi_rw |= flag;
+		bio->bi_opf |= flag;
 		submit_bio(bio);
 
 		atomic_inc(&dcc->issued_discard);

@@ -180,10 +180,10 @@ int test_iosched_add_unique_test_req(struct test_iosched *tios,
 
 	switch (req_unique) {
 	case REQ_UNIQUE_FLUSH:
-		bio->bi_rw = WRITE_FLUSH;
+		bio->bi_opf = WRITE_FLUSH;
 		break;
 	case REQ_UNIQUE_DISCARD:
-		bio->bi_rw = REQ_WRITE | REQ_DISCARD;
+		bio->bi_opf = REQ_WRITE | REQ_DISCARD;
 		bio->bi_iter.bi_size = nr_sects << 9;
 		bio->bi_iter.bi_sector = start_sec;
 		break;
@@ -195,7 +195,7 @@ int test_iosched_add_unique_test_req(struct test_iosched *tios,
 	}
 
 	rw_flags = bio_data_dir(bio);
-	if (bio->bi_rw & REQ_SYNC)
+	if (bio->bi_opf & REQ_SYNC)
 		rw_flags |= REQ_SYNC;
 
 	rq = blk_get_request(tios->req_q, rw_flags, GFP_KERNEL);

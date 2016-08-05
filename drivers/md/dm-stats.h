@@ -29,7 +29,7 @@ struct mapped_device;
 int dm_stats_message(struct mapped_device *md, unsigned argc, char **argv,
 		     char *result, unsigned maxlen);
 
-void dm_stats_account_io(struct dm_stats *stats, unsigned long bi_rw,
+void dm_stats_account_io(struct dm_stats *stats, unsigned long bi_opf,
 			 sector_t bi_sector, unsigned bi_sectors, bool end,
 			 unsigned long duration_jiffies,
 			 struct dm_stats_aux *aux);

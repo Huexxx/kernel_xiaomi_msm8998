@@ -33,7 +33,7 @@ static int invalidate_vbmeta_submit(struct bio *bio,
 	bio->bi_private = &wait;
 	bio->bi_end_io = invalidate_vbmeta_endio;
 	bio->bi_bdev = bdev;
-	bio->bi_rw = rw;
+	bio->bi_opf = rw;
 
 	bio->bi_iter.bi_sector = 0;
 	if (access_last_sector) {
