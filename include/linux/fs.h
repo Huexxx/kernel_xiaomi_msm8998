@@ -2656,7 +2656,7 @@ static inline int bio_rw(struct bio *bio)
 	if (op_is_write(bio_op(bio)))
 		return WRITE;
 
-	return bio->bi_rw & RWA_MASK;
+	return bio->bi_opf & RWA_MASK;
 }
 
 /*

@@ -584,7 +584,7 @@ static void dm_stat_for_entry(struct dm_stat *s, size_t entry,
 #endif
 }
 
-static void __dm_stat_bio(struct dm_stat *s, int bi_rw,
+static void __dm_stat_bio(struct dm_stat *s, int bi_opf,
 			  sector_t bi_sector, sector_t end_sector,
 			  bool end, unsigned long duration_jiffies,
 			  struct dm_stats_aux *stats_aux)
@@ -614,7 +614,7 @@ static void __dm_stat_bio(struct dm_stat *s, int bi_rw,
 		fragment_len = todo;
 		if (fragment_len > s->step - offset)
 			fragment_len = s->step - offset;
-		dm_stat_for_entry(s, entry, bi_rw, fragment_len,
+		dm_stat_for_entry(s, entry, bi_opf, fragment_len,
 				  stats_aux, end, duration_jiffies);
 		todo -= fragment_len;
 		entry++;
@@ -622,7 +622,7 @@ static void __dm_stat_bio(struct dm_stat *s, int bi_rw,
 	} while (unlikely(todo != 0));
 }
 
-void dm_stats_account_io(struct dm_stats *stats, unsigned long bi_rw,
+void dm_stats_account_io(struct dm_stats *stats, unsigned long bi_opf,
 			 sector_t bi_sector, unsigned bi_sectors, bool end,
 			 unsigned long duration_jiffies,
 			 struct dm_stats_aux *stats_aux)
@@ -645,11 +645,11 @@ void dm_stats_account_io(struct dm_stats *stats, unsigned long bi_rw,
 		last = raw_cpu_ptr(stats->last);
 		stats_aux->merged =
 			(bi_sector == (ACCESS_ONCE(last->last_sector) &&
-				       ((bi_rw == WRITE) ==
+				       ((bi_opf == WRITE) ==
 					(ACCESS_ONCE(last->last_rw) == WRITE))
 				       ));
 		ACCESS_ONCE(last->last_sector) = end_sector;
-		ACCESS_ONCE(last->last_rw) = bi_rw;
+		ACCESS_ONCE(last->last_rw) = bi_opf;
 	}
 
 	rcu_read_lock();
@@ -663,7 +663,7 @@ void dm_stats_account_io(struct dm_stats *stats, unsigned long bi_rw,
 				stats_aux->duration_ns = ktime_to_ns(ktime_get()) - stats_aux->duration_ns;
 			got_precise_time = true;
 		}
-		__dm_stat_bio(s, bi_rw, bi_sector, end_sector, end, duration_jiffies, stats_aux);
+		__dm_stat_bio(s, bi_opf, bi_sector, end_sector, end, duration_jiffies, stats_aux);
 	}
 
 	rcu_read_unlock();

@@ -5906,7 +5906,7 @@ static void btrfs_end_bio(struct bio *bio)
 				else
 					btrfs_dev_stat_inc(dev,
 						BTRFS_DEV_STAT_READ_ERRS);
-				if ((bio->bi_rw & WRITE_FLUSH) == WRITE_FLUSH)
+				if ((bio->bi_opf & WRITE_FLUSH) == WRITE_FLUSH)
 					btrfs_dev_stat_inc(dev,
 						BTRFS_DEV_STAT_FLUSH_ERRS);
 				btrfs_dev_stat_print_on_error(dev);
@@ -5983,7 +5983,7 @@ static noinline void btrfs_schedule_bio(struct btrfs_root *root,
 	bio->bi_next = NULL;
 
 	spin_lock(&device->io_lock);
-	if (bio->bi_rw & REQ_SYNC)
+	if (bio->bi_opf & REQ_SYNC)
 		pending_bios = &device->pending_sync_bios;
 	else
 		pending_bios = &device->pending_bios;
@@ -6014,7 +6014,7 @@ static void submit_stripe_bio(struct btrfs_root *root, struct btrfs_bio *bbio,
 	btrfs_io_bio(bio)->stripe_index = dev_nr;
 	bio->bi_end_io = btrfs_end_bio;
 	bio->bi_iter.bi_sector = physical >> 9;
-	bio->bi_rw |= rw;
+	bio->bi_opf |= rw;
 #ifdef DEBUG
 	{
 		struct rcu_string *name;

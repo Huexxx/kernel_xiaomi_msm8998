@@ -966,12 +966,12 @@ static void dec_pending(struct dm_io *io, int error)
 		if (io_error == DM_ENDIO_REQUEUE)
 			return;
 
-		if ((bio->bi_rw & REQ_PREFLUSH) && bio->bi_iter.bi_size) {
+		if ((bio->bi_opf & REQ_PREFLUSH) && bio->bi_iter.bi_size) {
 			/*
 			 * Preflush done for flush with data, reissue
 			 * without REQ_PREFLUSH.
 			 */
-			bio->bi_rw &= ~REQ_PREFLUSH;
+			bio->bi_opf &= ~REQ_PREFLUSH;
 			queue_io(md, bio);
 		} else {
 			/* done with normal IO or empty flush */
@@ -1462,7 +1462,7 @@ void dm_accept_partial_bio(struct bio *bio, unsigned n_sectors)
 {
 	struct dm_target_io *tio = container_of(bio, struct dm_target_io, clone);
 	unsigned bi_size = bio->bi_iter.bi_size >> SECTOR_SHIFT;
-	BUG_ON(bio->bi_rw & REQ_PREFLUSH);
+	BUG_ON(bio->bi_opf & REQ_PREFLUSH);
 	BUG_ON(bi_size > *tio->len_ptr);
 	BUG_ON(n_sectors > bi_size);
 	*tio->len_ptr -= bi_size - n_sectors;
@@ -1795,7 +1795,7 @@ static void __split_and_process_bio(struct mapped_device *md,
 
 	start_io_acct(ci.io);
 
-	if (bio->bi_rw & REQ_PREFLUSH) {
+	if (bio->bi_opf & REQ_PREFLUSH) {
 		ci.bio = &ci.md->flush_bio;
 		ci.sector_count = 0;
 		error = __send_empty_flush(&ci);

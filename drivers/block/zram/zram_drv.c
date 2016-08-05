@@ -603,14 +603,14 @@ static int read_from_bdev_async(struct zram *zram, struct bio_vec *bvec,
 	}
 
 	if (!parent) {
-		bio->bi_rw = 0;
+		bio->bi_opf = 0;
 		bio->bi_end_io = zram_page_end_io;
 	} else {
-		bio->bi_rw = parent->bi_rw;
+		bio->bi_opf = parent->bi_opf;
 		bio_chain(bio, parent);
 	}
 
-	bio->bi_rw = READ;
+	bio->bi_opf = READ;
 	submit_bio(bio);
 	return 1;
 }

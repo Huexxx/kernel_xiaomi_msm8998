@@ -1976,8 +1976,8 @@ static int crypt_map(struct dm_target *ti, struct bio *bio)
 	 * - for REQ_PREFLUSH device-mapper core ensures that no IO is in-flight
 	 * - for REQ_OP_DISCARD caller must use flush if IO ordering matters
 	 */
-	if (unlikely(bio->bi_rw & REQ_PREFLUSH) ||
-	    (unlikely(bio->bi_rw & REQ_NOENCRYPT) &&
+	if (unlikely(bio->bi_opf & REQ_PREFLUSH) ||
+	    (unlikely(bio->bi_opf & REQ_NOENCRYPT) &&
 	     test_bit(DM_CRYPT_ENCRYPT_OVERRIDE, &cc->flags)) ||
 	    bio_op(bio) == REQ_OP_DISCARD) {
 		bio->bi_bdev = cc->dev->bdev;

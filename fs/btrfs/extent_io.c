@@ -2132,7 +2132,7 @@ int repair_io_failure(struct inode *inode, u64 start, u64 length, u64 logical,
 		return -EIO;
 	}
 	bio->bi_bdev = dev->bdev;
-	bio->bi_rw = WRITE_SYNC;
+	bio->bi_opf = WRITE_SYNC;
 	bio_add_page(bio, page, length, pg_offset);
 
 	if (btrfsic_submit_bio_wait(bio)) {
@@ -2825,7 +2825,7 @@ static int __must_check submit_one_bio(struct bio *bio, int mirror_num,
 
 	if (tree->ops && tree->ops->submit_bio_hook)
 		ret = tree->ops->submit_bio_hook(page->mapping->host,
-						 bio->bi_rw, bio, mirror_num,
+						 bio->bi_opf, bio, mirror_num,
 						 bio_flags, start);
 	else
 		btrfsic_submit_bio(bio);
