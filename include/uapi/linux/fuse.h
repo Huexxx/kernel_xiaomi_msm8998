@@ -111,6 +111,7 @@
  *
  *  7.26
  *  - add FUSE_HANDLE_KILLPRIV
+ *  - add FUSE_POSIX_ACL
  */
 
 #ifndef _LINUX_FUSE_H
@@ -244,6 +245,7 @@ struct fuse_file_lock {
  * FUSE_NO_OPEN_SUPPORT: kernel supports zero-message opens
  * FUSE_PARALLEL_DIROPS: allow parallel lookups and readdir
  * FUSE_HANDLE_KILLPRIV: fs handles killing suid/sgid/cap on write/chown/trunc
+ * FUSE_POSIX_ACL: filesystem supports posix acls
  */
 #define FUSE_ASYNC_READ		(1 << 0)
 #define FUSE_POSIX_LOCKS	(1 << 1)
@@ -265,6 +267,7 @@ struct fuse_file_lock {
 #define FUSE_NO_OPEN_SUPPORT	(1 << 17)
 #define FUSE_PARALLEL_DIROPS    (1 << 18)
 #define FUSE_HANDLE_KILLPRIV	(1 << 19)
+#define FUSE_POSIX_ACL		(1 << 20)
 
 #define FUSE_PASSTHROUGH	(1 << 31)
 /**
