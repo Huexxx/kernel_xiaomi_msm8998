@@ -6608,14 +6608,6 @@ S:	Maintained
 F:	Documentation/ldm.txt
 F:	block/partitions/ldm.*
 
-LogFS
-M:	Joern Engel <joern@logfs.org>
-M:	Prasad Joshi <prasadjoshi.linux@gmail.com>
-L:	logfs@logfs.org
-W:	logfs.org
-S:	Maintained
-F:	fs/logfs/
-
 LPC32XX MACHINE SUPPORT
 M:	Roland Stigge <stigge@antcom.de>
 L:	linux-arm-kernel@lists.infradead.org (moderated for non-subscribers)
