@@ -151,7 +151,7 @@ extern void mnt_pin_kill(struct mount *m);
 /*
  * fs/nsfs.c
  */
-extern struct dentry_operations ns_dentry_operations;
+extern const struct dentry_operations ns_dentry_operations;
 
 #ifdef CONFIG_FILE_TABLE_DEBUG
 void global_filetable_print_warning_once(void);
