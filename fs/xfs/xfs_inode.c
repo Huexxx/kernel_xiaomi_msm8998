@@ -757,6 +757,7 @@ xfs_ialloc(
 	uint		flags;
 	int		error;
 	struct timespec	tv;
+	struct inode	*inode;
 
 	/*
 	 * Call the space management code to pick
@@ -782,6 +783,7 @@ xfs_ialloc(
 	if (error)
 		return error;
 	ASSERT(ip != NULL);
+	inode = VFS_I(ip);
 
 	/*
 	 * We always convert v1 inodes to v2 now - we only support filesystems
@@ -822,7 +824,7 @@ xfs_ialloc(
 	ip->i_d.di_nextents = 0;
 	ASSERT(ip->i_d.di_nblocks == 0);
 
-	tv = current_fs_time(mp->m_super);
+	tv = current_time(inode);
 	ip->i_d.di_mtime.t_sec = (__int32_t)tv.tv_sec;
 	ip->i_d.di_mtime.t_nsec = (__int32_t)tv.tv_nsec;
 	ip->i_d.di_atime = ip->i_d.di_mtime;
