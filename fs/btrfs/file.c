@@ -1735,7 +1735,7 @@ static void update_time_for_write(struct inode *inode)
 	if (IS_NOCMTIME(inode))
 		return;
 
-	now = current_fs_time(inode->i_sb);
+	now = current_time(inode);
 	if (!timespec_equal(&inode->i_mtime, &now))
 		inode->i_mtime = now;
 

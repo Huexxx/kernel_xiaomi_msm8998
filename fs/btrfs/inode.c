@@ -4978,7 +4978,7 @@ static int btrfs_setsize(struct inode *inode, struct iattr *attr)
 		inode_inc_iversion(inode);
 		if (!(mask & (ATTR_CTIME | ATTR_MTIME)))
 			inode->i_ctime = inode->i_mtime =
-				current_fs_time(inode->i_sb);
+				current_time(inode);
 	}
 
 	if (newsize > oldsize) {
