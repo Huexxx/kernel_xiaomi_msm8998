@@ -255,7 +255,7 @@ int notify_change2(struct vfsmount *mnt, struct dentry * dentry, struct iattr * 
 			inode->i_flags &= ~S_NOSEC;
 	}
 
-	now = current_fs_time(inode->i_sb);
+	now = current_time(inode);
 
 	attr->ia_ctime = now;
 	if (!(ia_valid & ATTR_ATIME_SET))
