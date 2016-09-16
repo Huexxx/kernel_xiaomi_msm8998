@@ -612,9 +612,10 @@ static inline struct inode *vfs_select_inode(struct dentry *dentry,
  * If dentry is on an union/overlay, then return the underlying, real inode.
  * Otherwise return d_inode().
  */
-static inline struct inode *d_real_inode(struct dentry *dentry)
+static inline struct inode *d_real_inode(const struct dentry *dentry)
 {
-	return d_backing_inode(d_real(dentry));
+	/* This usage of d_real() results in const dentry */
+	return d_backing_inode(d_real((struct dentry *) dentry));
 }
 
 struct name_snapshot {
