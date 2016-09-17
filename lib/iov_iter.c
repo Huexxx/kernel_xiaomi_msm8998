@@ -317,8 +317,7 @@ int iov_iter_fault_in_readable(struct iov_iter *i, size_t bytes)
 
 	if (iter_is_iovec(i)) {
 		iterate_iovec(i, bytes, v, iov, skip, ({
-			err = fault_in_multipages_readable(v.iov_base,
-					v.iov_len);
+			err = fault_in_pages_readable(v.iov_base, v.iov_len);
 			if (unlikely(err))
 			return err;
 		0;}))

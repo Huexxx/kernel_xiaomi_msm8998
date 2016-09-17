@@ -540,65 +540,9 @@ void page_endio(struct page *page, int rw, int err);
 extern void add_page_wait_queue(struct page *page, wait_queue_t *waiter);
 
 /*
- * Fault a userspace page into pagetables.  Return non-zero on a fault.
- *
- * This assumes that two userspace pages are always sufficient.  That's
- * not true if PAGE_CACHE_SIZE > PAGE_SIZE.
+ * Fault everything in given userspace address range in.
  */
 static inline int fault_in_pages_writeable(char __user *uaddr, int size)
-{
-	int ret;
-
-	if (unlikely(size == 0))
-		return 0;
-
-	/*
-	 * Writing zeroes into userspace here is OK, because we know that if
-	 * the zero gets there, we'll be overwriting it.
-	 */
-	ret = __put_user(0, uaddr);
-	if (ret == 0) {
-		char __user *end = uaddr + size - 1;
-
-		/*
-		 * If the page was already mapped, this will get a cache miss
-		 * for sure, so try to avoid doing it.
-		 */
-		if (((unsigned long)uaddr & PAGE_MASK) !=
-				((unsigned long)end & PAGE_MASK))
-			ret = __put_user(0, end);
-	}
-	return ret;
-}
-
-static inline int fault_in_pages_readable(const char __user *uaddr, int size)
-{
-	volatile char c;
-	int ret;
-
-	if (unlikely(size == 0))
-		return 0;
-
-	ret = __get_user(c, uaddr);
-	if (ret == 0) {
-		const char __user *end = uaddr + size - 1;
-
-		if (((unsigned long)uaddr & PAGE_MASK) !=
-				((unsigned long)end & PAGE_MASK)) {
-			ret = __get_user(c, end);
-			(void)c;
-		}
-	}
-	return ret;
-}
-
-/*
- * Multipage variants of the above prefault helpers, useful if more than
- * PAGE_SIZE of data needs to be prefaulted. These are separate from the above
- * functions (which only handle up to PAGE_SIZE) to avoid clobbering the
- * filemap.c hotpaths.
- */
-static inline int fault_in_multipages_writeable(char __user *uaddr, int size)
 {
 	char __user *end = uaddr + size - 1;
 
@@ -625,8 +569,7 @@ static inline int fault_in_multipages_writeable(char __user *uaddr, int size)
 	return 0;
 }
 
-static inline int fault_in_multipages_readable(const char __user *uaddr,
-					       int size)
+static inline int fault_in_pages_readable(const char __user *uaddr, int size)
 {
 	volatile char c;
 	const char __user *end = uaddr + size - 1;
