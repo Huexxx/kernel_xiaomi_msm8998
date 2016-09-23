@@ -382,42 +382,6 @@ xfs_file_read_iter(
 	return ret;
 }
 
-STATIC ssize_t
-xfs_file_splice_read(
-	struct file		*infilp,
-	loff_t			*ppos,
-	struct pipe_inode_info	*pipe,
-	size_t			count,
-	unsigned int		flags)
-{
-	struct xfs_inode	*ip = XFS_I(infilp->f_mapping->host);
-	int			ioflags = 0;
-	ssize_t			ret;
-
-	XFS_STATS_INC(ip->i_mount, xs_read_calls);
-
-	if (infilp->f_mode & FMODE_NOCMTIME)
-		ioflags |= XFS_IO_INVIS;
-
-	if (XFS_FORCED_SHUTDOWN(ip->i_mount))
-		return -EIO;
-
-	xfs_rw_ilock(ip, XFS_IOLOCK_SHARED);
-
-	trace_xfs_file_splice_read(ip, count, *ppos, ioflags);
-
-	/* for dax, we need to avoid the page cache */
-	if (IS_DAX(VFS_I(ip)))
-		ret = default_file_splice_read(infilp, ppos, pipe, count, flags);
-	else
-		ret = generic_file_splice_read(infilp, ppos, pipe, count, flags);
-	if (ret > 0)
-		XFS_STATS_ADD(ip->i_mount, xs_read_bytes, ret);
-
-	xfs_rw_iunlock(ip, XFS_IOLOCK_SHARED);
-	return ret;
-}
-
 /*
  * This routine is called to handle zeroing any space in the last block of the
  * file that is beyond the EOF.  We do this since the size is being increased
@@ -1646,7 +1610,7 @@ const struct file_operations xfs_file_operations = {
 	.llseek		= xfs_file_llseek,
 	.read_iter	= xfs_file_read_iter,
 	.write_iter	= xfs_file_write_iter,
-	.splice_read	= xfs_file_splice_read,
+	.splice_read	= generic_file_splice_read,
 	.splice_write	= iter_file_splice_write,
 	.unlocked_ioctl	= xfs_file_ioctl,
 #ifdef CONFIG_COMPAT

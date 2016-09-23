@@ -1111,36 +1111,22 @@ restart:
 		int write_mutex_locked = 0;
 
 		cio->cui_fd  = LUSTRE_FPRIVATE(file);
-		vio->cui_io_subtype = args->via_io_subtype;
-
-		switch (vio->cui_io_subtype) {
-		case IO_NORMAL:
-			cio->cui_iter = args->u.normal.via_iter;
-			cio->cui_iocb = args->u.normal.via_iocb;
-			if ((iot == CIT_WRITE) &&
-			    !(cio->cui_fd->fd_flags & LL_FILE_GROUP_LOCKED)) {
-				if (mutex_lock_interruptible(&lli->
-							       lli_write_mutex)) {
-					result = -ERESTARTSYS;
-					goto out;
-				}
-				write_mutex_locked = 1;
-			} else if (iot == CIT_READ) {
-				down_read(&lli->lli_trunc_sem);
+		cio->cui_iter = args->u.normal.via_iter;
+		cio->cui_iocb = args->u.normal.via_iocb;
+		if ((iot == CIT_WRITE) &&
+		    !(cio->cui_fd->fd_flags & LL_FILE_GROUP_LOCKED)) {
+			if (mutex_lock_interruptible(&lli->lli_write_mutex)) {
+				result = -ERESTARTSYS;
+				goto out;
 			}
-			break;
-		case IO_SPLICE:
-			vio->u.splice.cui_pipe = args->u.splice.via_pipe;
-			vio->u.splice.cui_flags = args->u.splice.via_flags;
-			break;
-		default:
-			CERROR("Unknown IO type - %u\n", vio->cui_io_subtype);
-			LBUG();
+			write_mutex_locked = 1;
+		} else if (iot == CIT_READ) {
+			down_read(&lli->lli_trunc_sem);
 		}
 		result = cl_io_loop(env, io);
 		if (write_mutex_locked)
 			mutex_unlock(&lli->lli_write_mutex);
-		else if (args->via_io_subtype == IO_NORMAL && iot == CIT_READ)
+		else if (iot == CIT_READ)
 			up_read(&lli->lli_trunc_sem);
 	} else {
 		/* cl_io_rw_init() handled IO */
@@ -1192,7 +1178,7 @@ static ssize_t ll_file_read_iter(struct kiocb *iocb, struct iov_iter *to)
 	if (IS_ERR(env))
 		return PTR_ERR(env);
 
-	args = vvp_env_args(env, IO_NORMAL);
+	args = vvp_env_args(env);
 	args->u.normal.via_iter = to;
 	args->u.normal.via_iocb = iocb;
 
@@ -1216,37 +1202,12 @@ static ssize_t ll_file_write_iter(struct kiocb *iocb, struct iov_iter *from)
 	if (IS_ERR(env))
 		return PTR_ERR(env);
 
-	args = vvp_env_args(env, IO_NORMAL);
+	args = vvp_env_args(env);
 	args->u.normal.via_iter = from;
 	args->u.normal.via_iocb = iocb;
 
 	result = ll_file_io_generic(env, args, iocb->ki_filp, CIT_WRITE,
 				  &iocb->ki_pos, iov_iter_count(from));
-	cl_env_put(env, &refcheck);
-	return result;
-}
-
-/*
- * Send file content (through pagecache) somewhere with helper
- */
-static ssize_t ll_file_splice_read(struct file *in_file, loff_t *ppos,
-				   struct pipe_inode_info *pipe, size_t count,
-				   unsigned int flags)
-{
-	struct lu_env      *env;
-	struct vvp_io_args *args;
-	ssize_t	     result;
-	int		 refcheck;
-
-	env = cl_env_get(&refcheck);
-	if (IS_ERR(env))
-		return PTR_ERR(env);
-
-	args = vvp_env_args(env, IO_SPLICE);
-	args->u.splice.via_pipe = pipe;
-	args->u.splice.via_flags = flags;
-
-	result = ll_file_io_generic(env, args, in_file, CIT_READ, ppos, count);
 	cl_env_put(env, &refcheck);
 	return result;
 }
@@ -3103,7 +3064,7 @@ struct file_operations ll_file_operations = {
 	.release	= ll_file_release,
 	.mmap	   = ll_file_mmap,
 	.llseek	 = ll_file_seek,
-	.splice_read    = ll_file_splice_read,
+	.splice_read    = generic_file_splice_read,
 	.fsync	  = ll_fsync,
 	.flush	  = ll_flush
 };
@@ -3116,7 +3077,7 @@ struct file_operations ll_file_operations_flock = {
 	.release	= ll_file_release,
 	.mmap	   = ll_file_mmap,
 	.llseek	 = ll_file_seek,
-	.splice_read    = ll_file_splice_read,
+	.splice_read    = generic_file_splice_read,
 	.fsync	  = ll_fsync,
 	.flush	  = ll_flush,
 	.flock	  = ll_file_flock,
@@ -3132,7 +3093,7 @@ struct file_operations ll_file_operations_noflock = {
 	.release	= ll_file_release,
 	.mmap	   = ll_file_mmap,
 	.llseek	 = ll_file_seek,
-	.splice_read    = ll_file_splice_read,
+	.splice_read    = generic_file_splice_read,
 	.fsync	  = ll_fsync,
 	.flush	  = ll_flush,
 	.flock	  = ll_file_noflock,
