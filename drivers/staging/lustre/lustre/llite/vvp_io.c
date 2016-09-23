@@ -50,18 +50,6 @@ static struct vvp_io *cl2vvp_io(const struct lu_env *env,
 				const struct cl_io_slice *slice);
 
 /**
- * True, if \a io is a normal io, False for splice_{read,write}
- */
-int cl_is_normalio(const struct lu_env *env, const struct cl_io *io)
-{
-	struct vvp_io *vio = vvp_env_io(env);
-
-	LASSERT(io->ci_type == CIT_READ || io->ci_type == CIT_WRITE);
-
-	return vio->cui_io_subtype == IO_NORMAL;
-}
-
-/**
  * For swapping layout. The file's layout may have changed.
  * To avoid populating pages to a wrong stripe, we have to verify the
  * correctness of layout. It works because swapping layout processes
@@ -216,9 +204,6 @@ static int vvp_mmap_locks(const struct lu_env *env,
 	struct iovec iov;
 
 	LASSERT(io->ci_type == CIT_READ || io->ci_type == CIT_WRITE);
-
-	if (!cl_is_normalio(env, io))
-		return 0;
 
 	if (vio->cui_iter == NULL) /* nfs or loop back device write */
 		return 0;
@@ -518,24 +503,8 @@ static int vvp_io_read_start(const struct lu_env *env,
 
 	/* BUG: 5972 */
 	file_accessed(file);
-	switch (vio->cui_io_subtype) {
-	case IO_NORMAL:
-		LASSERT(cio->cui_iocb->ki_pos == pos);
-		result = generic_file_read_iter(cio->cui_iocb, cio->cui_iter);
-		break;
-	case IO_SPLICE:
-		result = generic_file_splice_read(file, &pos,
-				vio->u.splice.cui_pipe, cnt,
-				vio->u.splice.cui_flags);
-		/* LU-1109: do splice read stripe by stripe otherwise if it
-		 * may make nfsd stuck if this read occupied all internal pipe
-		 * buffers. */
-		io->ci_continue = 0;
-		break;
-	default:
-		CERROR("Wrong IO type %u\n", vio->cui_io_subtype);
-		LBUG();
-	}
+	LASSERT(cio->cui_iocb->ki_pos == pos);
+	result = generic_file_read_iter(cio->cui_iocb, cio->cui_iter);
 
 out:
 	if (result >= 0) {

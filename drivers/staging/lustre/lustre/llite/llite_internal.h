@@ -819,24 +819,10 @@ struct ccc_object *cl_inode2ccc(struct inode *inode);
 void vvp_write_pending (struct ccc_object *club, struct ccc_page *page);
 void vvp_write_complete(struct ccc_object *club, struct ccc_page *page);
 
-/* specific architecture can implement only part of this list */
-enum vvp_io_subtype {
-	/** normal IO */
-	IO_NORMAL,
-	/** io started from splice_{read|write} */
-	IO_SPLICE
-};
-
 /* IO subtypes */
 struct vvp_io {
 	/** io subtype */
-	enum vvp_io_subtype    cui_io_subtype;
-
 	union {
-		struct {
-			struct pipe_inode_info *cui_pipe;
-			unsigned int	    cui_flags;
-		} splice;
 		struct vvp_fault_io {
 			/**
 			 * Inode modification time that is checked across DLM
@@ -879,17 +865,11 @@ struct vvp_io {
  */
 struct vvp_io_args {
 	/** normal/splice */
-	enum vvp_io_subtype via_io_subtype;
-
 	union {
 		struct {
 			struct kiocb      *via_iocb;
 			struct iov_iter   *via_iter;
 		} normal;
-		struct {
-			struct pipe_inode_info  *via_pipe;
-			unsigned int       via_flags;
-		} splice;
 	} u;
 };
 
@@ -917,14 +897,9 @@ static inline struct vvp_thread_info *vvp_env_info(const struct lu_env *env)
 	return info;
 }
 
-static inline struct vvp_io_args *vvp_env_args(const struct lu_env *env,
-					       enum vvp_io_subtype type)
+static inline struct vvp_io_args *vvp_env_args(const struct lu_env *env)
 {
-	struct vvp_io_args *ret = &vvp_env_info(env)->vti_args;
-
-	ret->via_io_subtype = type;
-
-	return ret;
+	return &vvp_env_info(env)->vti_args;
 }
 
 struct vvp_session {
