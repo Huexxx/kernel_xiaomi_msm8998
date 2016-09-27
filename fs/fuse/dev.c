@@ -2073,11 +2073,8 @@ static ssize_t fuse_dev_splice_write(struct pipe_inode_info *pipe,
 
 	pipe_lock(pipe);
 out_free:
-	for (idx = 0; idx < nbuf; idx++) {
-		struct pipe_buffer *buf = &bufs[idx];
-		if (buf->ops)
-			buf->ops->release(pipe, buf);
-	}
+	for (idx = 0; idx < nbuf; idx++)
+		pipe_buf_release(pipe, &bufs[idx]);
 	pipe_unlock(pipe);
 
 	kfree(bufs);
