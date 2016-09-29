@@ -1913,10 +1913,7 @@ static const struct inode_operations fuse_dir_inode_operations = {
 	.mknod		= fuse_mknod,
 	.permission	= fuse_permission,
 	.getattr	= fuse_getattr,
-	.setxattr	= generic_setxattr,
-	.getxattr	= generic_getxattr,
 	.listxattr	= fuse_listxattr,
-	.removexattr	= generic_removexattr,
 	.get_acl	= fuse_get_acl,
 	.set_acl	= fuse_set_acl,
 };
@@ -1936,10 +1933,7 @@ static const struct inode_operations fuse_common_inode_operations = {
 	.setattr	= fuse_setattr,
 	.permission	= fuse_permission,
 	.getattr	= fuse_getattr,
-	.setxattr	= generic_setxattr,
-	.getxattr	= generic_getxattr,
 	.listxattr	= fuse_listxattr,
-	.removexattr	= generic_removexattr,
 	.get_acl	= fuse_get_acl,
 	.set_acl	= fuse_set_acl,
 };
@@ -1949,10 +1943,7 @@ static const struct inode_operations fuse_symlink_inode_operations = {
 	.get_link	= fuse_get_link,
 	.readlink	= generic_readlink,
 	.getattr	= fuse_getattr,
-	.setxattr	= generic_setxattr,
-	.getxattr	= generic_getxattr,
 	.listxattr	= fuse_listxattr,
-	.removexattr	= generic_removexattr,
 };
 
 void fuse_init_common(struct inode *inode)
