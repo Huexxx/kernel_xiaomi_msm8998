@@ -235,6 +235,7 @@ static int kernfs_fill_super(struct super_block *sb, unsigned long magic)
 	sb->s_op = &kernfs_sops;
 	if (info->root->flags & KERNFS_ROOT_SUPPORT_EXPORTOP)
 		sb->s_export_op = &kernfs_export_ops;
+	sb->s_xattr = kernfs_xattr_handlers;
 	sb->s_time_gran = 1;
 
 	/* get root inode, initialize and unlock it */
