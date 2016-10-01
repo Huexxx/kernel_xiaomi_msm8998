@@ -1084,7 +1084,7 @@ int fuse_allow_current_process(struct fuse_conn *fc)
 {
 	const struct cred *cred;
 
-	if (fc->flags & FUSE_ALLOW_OTHER)
+	if (fc->allow_other)
 		return current_in_userns(fc->user_ns);
 
 	cred = current_cred();
@@ -1160,7 +1160,7 @@ static int fuse_permission(struct inode *inode, int mask)
 	/*
 	 * If attributes are needed, refresh them before proceeding
 	 */
-	if ((fc->flags & FUSE_DEFAULT_PERMISSIONS) ||
+	if (fc->default_permissions ||
 	    ((mask & MAY_EXEC) && S_ISREG(inode->i_mode))) {
 		struct fuse_inode *fi = get_fuse_inode(inode);
 
@@ -1173,7 +1173,7 @@ static int fuse_permission(struct inode *inode, int mask)
 		}
 	}
 
-	if (fc->flags & FUSE_DEFAULT_PERMISSIONS) {
+	if (fc->default_permissions) {
 		err = generic_permission(inode, mask);
 
 		/* If permission is denied, try to refresh file
@@ -1676,7 +1676,7 @@ int fuse_do_setattr(struct dentry *dentry, struct iattr *attr,
 	int err;
 	bool trust_local_cmtime = is_wb && S_ISREG(inode->i_mode);
 
-	if (!(fc->flags & FUSE_DEFAULT_PERMISSIONS))
+	if (!fc->default_permissions)
 		attr->ia_valid |= ATTR_FORCE;
 
 	err = setattr_prepare(dentry, attr);
