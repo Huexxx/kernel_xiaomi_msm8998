@@ -67,7 +67,8 @@ struct fuse_mount_data {
 	unsigned rootmode_present:1;
 	unsigned user_id_present:1;
 	unsigned group_id_present:1;
-	unsigned flags;
+	unsigned default_permissions:1;
+	unsigned allow_other:1;
 	unsigned max_read;
 	unsigned blksize;
 };
@@ -199,7 +200,7 @@ void fuse_change_attributes_common(struct inode *inode, struct fuse_attr *attr,
 	 * check in may_delete().
 	 */
 	fi->orig_i_mode = inode->i_mode;
-	if (!(fc->flags & FUSE_DEFAULT_PERMISSIONS))
+	if (!fc->default_permissions)
 		inode->i_mode &= ~S_ISVTX;
 
 	fi->orig_ino = attr->ino;
@@ -538,11 +539,11 @@ static int parse_fuse_opt(char *opt, struct fuse_mount_data *d, int is_bdev,
 			break;
 
 		case OPT_DEFAULT_PERMISSIONS:
-			d->flags |= FUSE_DEFAULT_PERMISSIONS;
+			d->default_permissions = 1;
 			break;
 
 		case OPT_ALLOW_OTHER:
-			d->flags |= FUSE_ALLOW_OTHER;
+			d->allow_other = 1;
 			break;
 
 		case OPT_MAX_READ:
@@ -576,9 +577,9 @@ static int fuse_show_options(struct seq_file *m, struct dentry *root)
 
 	seq_printf(m, ",user_id=%u", from_kuid_munged(fc->user_ns, fc->user_id));
 	seq_printf(m, ",group_id=%u", from_kgid_munged(fc->user_ns, fc->group_id));
-	if (fc->flags & FUSE_DEFAULT_PERMISSIONS)
+	if (fc->default_permissions)
 		seq_puts(m, ",default_permissions");
-	if (fc->flags & FUSE_ALLOW_OTHER)
+	if (fc->allow_other)
 		seq_puts(m, ",allow_other");
 	if (fc->max_read != ~0)
 		seq_printf(m, ",max_read=%u", fc->max_read);
@@ -929,7 +930,7 @@ static void process_init_reply(struct fuse_conn *fc, struct fuse_req *req)
 			if (arg->time_gran && arg->time_gran <= 1000000000)
 				fc->sb->s_time_gran = arg->time_gran;
 			if ((arg->flags & FUSE_POSIX_ACL)) {
-				fc->flags |= FUSE_DEFAULT_PERMISSIONS;
+				fc->default_permissions = 1;
 				fc->posix_acl = 1;
 				fc->sb->s_xattr = fuse_acl_xattr_handlers;
 			}
@@ -1153,7 +1154,8 @@ static int fuse_fill_super(struct super_block *sb, void *data, int silent)
 		fc->dont_mask = 1;
 	sb->s_flags |= MS_POSIXACL;
 
-	fc->flags = d.flags;
+	fc->default_permissions = d.default_permissions;
+	fc->allow_other = d.allow_other;
 	fc->user_id = d.user_id;
 	fc->group_id = d.group_id;
 	fc->max_read = max_t(unsigned, 4096, d.max_read);
