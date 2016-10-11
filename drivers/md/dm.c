@@ -1945,7 +1945,7 @@ static void init_tio(struct dm_rq_target_io *tio, struct request *rq,
 	tio->error = 0;
 	memset(&tio->info, 0, sizeof(tio->info));
 	if (md->kworker_task)
-		init_kthread_work(&tio->work, map_tio_request);
+		kthread_init_work(&tio->work, map_tio_request);
 }
 
 static struct dm_rq_target_io *prep_tio(struct request *rq,
@@ -2675,7 +2675,7 @@ EXPORT_SYMBOL_GPL(dm_get_queue_limits);
 static void init_rq_based_worker_thread(struct mapped_device *md)
 {
 	/* Initialize the request-based DM worker thread */
-	init_kthread_worker(&md->kworker);
+	kthread_init_worker(&md->kworker);
 	md->kworker_task = kthread_run(kthread_worker_fn, &md->kworker,
 				       "kdmwork-%s", dm_device_name(md));
 }
@@ -2771,7 +2771,7 @@ static int dm_mq_queue_rq(struct blk_mq_hw_ctx *hctx,
 		/* clone request is allocated at the end of the pdu */
 		tio->clone = (void *)blk_mq_rq_to_pdu(rq) + sizeof(struct dm_rq_target_io);
 		(void) clone_rq(rq, md, tio, GFP_ATOMIC);
-		queue_kthread_work(&md->kworker, &tio->work);
+		kthread_queue_work(&md->kworker, &tio->work);
 	} else {
 		/* Direct call is fine since .queue_rq allows allocations */
 		if (map_request(tio, rq, md) == DM_MAPIO_REQUEUE) {
@@ -2961,7 +2961,7 @@ static void __dm_destroy(struct mapped_device *md, bool wait)
 	blk_set_queue_dying(q);
 
 	if (dm_request_based(md) && md->kworker_task)
-		flush_kthread_worker(&md->kworker);
+		kthread_flush_worker(&md->kworker);
 
 	/*
 	 * Take suspend_lock so that presuspend and postsuspend methods
@@ -3218,7 +3218,7 @@ static int __dm_suspend(struct mapped_device *md, struct dm_table *map,
 	if (dm_request_based(md)) {
 		stop_queue(md->queue);
 		if (md->kworker_task)
-			flush_kthread_worker(&md->kworker);
+			kthread_flush_worker(&md->kworker);
 	}
 
 	flush_workqueue(md->wq);
