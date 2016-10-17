@@ -698,6 +698,7 @@ static struct sk_buff *vrf_ip_rcv(struct net_device *vrf_dev,
 {
 	skb->dev = vrf_dev;
 	skb->skb_iif = vrf_dev->ifindex;
+	IPCB(skb)->flags |= IPSKB_L3SLAVE;
 
 	skb_push(skb, skb->mac_len);
 	dev_queue_xmit_nit(skb, vrf_dev);
