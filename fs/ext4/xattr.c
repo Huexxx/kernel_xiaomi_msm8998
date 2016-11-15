@@ -1080,7 +1080,7 @@ int ext4_xattr_ibody_find(struct inode *inode, struct ext4_xattr_info *i,
 	return 0;
 }
 
-int ext4_xattr_ibody_set(handle_t *handle, struct inode *inode,
+int ext4_xattr_ibody_set(struct inode *inode,
 				struct ext4_xattr_info *i,
 				struct ext4_xattr_ibody_find *is)
 {
@@ -1176,11 +1176,11 @@ ext4_xattr_set_handle(handle_t *handle, struct inode *inode, int name_index,
 	}
 	if (!value) {
 		if (!is.s.not_found)
-			error = ext4_xattr_ibody_set(handle, inode, &i, &is);
+			error = ext4_xattr_ibody_set(inode, &i, &is);
 		else if (!bs.s.not_found)
 			error = ext4_xattr_block_set(handle, inode, &i, &bs);
 	} else {
-		error = ext4_xattr_ibody_set(handle, inode, &i, &is);
+		error = ext4_xattr_ibody_set(inode, &i, &is);
 		if (!error && !bs.s.not_found) {
 			i.value = NULL;
 			error = ext4_xattr_block_set(handle, inode, &i, &bs);
@@ -1197,8 +1197,7 @@ ext4_xattr_set_handle(handle_t *handle, struct inode *inode, int name_index,
 				goto cleanup;
 			if (!is.s.not_found) {
 				i.value = NULL;
-				error = ext4_xattr_ibody_set(handle, inode, &i,
-							     &is);
+				error = ext4_xattr_ibody_set(inode, &i, &is);
 			}
 		}
 	}
@@ -1469,7 +1468,7 @@ retry:
 			goto cleanup;
 
 		/* Remove the chosen entry from the inode */
-		error = ext4_xattr_ibody_set(handle, inode, &i, is);
+		error = ext4_xattr_ibody_set(inode, &i, is);
 		if (error)
 			goto cleanup;
 		total_ino -= entry_size;
