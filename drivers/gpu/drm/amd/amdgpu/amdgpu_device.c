@@ -1963,7 +1963,7 @@ static void amdgpu_debugfs_remove_files(struct amdgpu_device *adev)
 static ssize_t amdgpu_debugfs_regs_read(struct file *f, char __user *buf,
 					size_t size, loff_t *pos)
 {
-	struct amdgpu_device *adev = f->f_inode->i_private;
+	struct amdgpu_device *adev = file_inode(f)->i_private;
 	ssize_t result = 0;
 	int r;
 
@@ -1993,7 +1993,7 @@ static ssize_t amdgpu_debugfs_regs_read(struct file *f, char __user *buf,
 static ssize_t amdgpu_debugfs_regs_write(struct file *f, const char __user *buf,
 					 size_t size, loff_t *pos)
 {
-	struct amdgpu_device *adev = f->f_inode->i_private;
+	struct amdgpu_device *adev = file_inode(f)->i_private;
 	ssize_t result = 0;
 	int r;
 

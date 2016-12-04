@@ -219,7 +219,7 @@ static ssize_t ipa_ut_dbgfs_meta_test_write(struct file *file,
 		rc = -EFAULT;
 		goto unlock_mutex;
 	}
-	suite = file->f_inode->i_private;
+	suite = file_inode(file)->i_private;
 	ipa_assert_on(!suite);
 	meta_type = (long)(file->private_data);
 	IPA_UT_DBG("Meta test type %ld\n", meta_type);
@@ -361,7 +361,7 @@ static ssize_t ipa_ut_dbgfs_meta_test_read(struct file *file,
 	IPA_UT_DBG("Entry\n");
 
 	mutex_lock(&ipa_ut_ctx->lock);
-	suite = file->f_inode->i_private;
+	suite = file_inode(file)->i_private;
 	ipa_assert_on(!suite);
 	meta_type = (long)(file->private_data);
 	IPA_UT_DBG("Meta test type %ld\n", meta_type);
@@ -478,7 +478,7 @@ static ssize_t ipa_ut_dbgfs_test_write(struct file *file,
 		rc = -EFAULT;
 		goto unlock_mutex;
 	}
-	test = file->f_inode->i_private;
+	test = file_inode(file)->i_private;
 	ipa_assert_on(!test);
 
 	_IPA_UT_TEST_LOG_BUF_NAME = kzalloc(_IPA_UT_TEST_LOG_BUF_SIZE,
@@ -588,7 +588,7 @@ static ssize_t ipa_ut_dbgfs_test_read(struct file *file, char __user *ubuf,
 	IPA_UT_DBG("Entry\n");
 
 	mutex_lock(&ipa_ut_ctx->lock);
-	test = file->f_inode->i_private;
+	test = file_inode(file)->i_private;
 	ipa_assert_on(!test);
 
 	buf = kmalloc(IPA_UT_DEBUG_READ_BUF_SIZE, GFP_KERNEL);
