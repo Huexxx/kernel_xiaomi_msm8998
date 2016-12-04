@@ -793,7 +793,7 @@ static unsigned int hfi1_snoop_poll(struct file *fp,
 
 	struct hfi1_devdata *dd;
 
-	dd = hfi1_dd_from_sc_inode(fp->f_inode);
+	dd = hfi1_dd_from_sc_inode(file_inode(fp));
 	if (dd == NULL)
 		return -ENODEV;
 
@@ -821,7 +821,7 @@ static ssize_t hfi1_snoop_write(struct file *fp, const char __user *data,
 	struct hfi1_ibport *ibp;
 	struct hfi1_pportdata *ppd;
 
-	dd = hfi1_dd_from_sc_inode(fp->f_inode);
+	dd = hfi1_dd_from_sc_inode(file_inode(fp));
 	if (dd == NULL)
 		return -ENODEV;
 
@@ -919,7 +919,7 @@ static ssize_t hfi1_snoop_read(struct file *fp, char __user *data,
 	struct snoop_packet *packet = NULL;
 	struct hfi1_devdata *dd;
 
-	dd = hfi1_dd_from_sc_inode(fp->f_inode);
+	dd = hfi1_dd_from_sc_inode(file_inode(fp));
 	if (dd == NULL)
 		return -ENODEV;
 
@@ -977,7 +977,7 @@ static long hfi1_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 	unsigned int index;
 	struct hfi1_link_info link_info;
 
-	dd = hfi1_dd_from_sc_inode(fp->f_inode);
+	dd = hfi1_dd_from_sc_inode(file_inode(fp));
 	if (dd == NULL)
 		return -ENODEV;
 
