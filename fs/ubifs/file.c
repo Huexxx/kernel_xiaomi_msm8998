@@ -1629,7 +1629,6 @@ const struct inode_operations ubifs_file_inode_operations = {
 };
 
 const struct inode_operations ubifs_symlink_inode_operations = {
-	.readlink    = generic_readlink,
 	.get_link    = simple_get_link,
 	.setattr     = ubifs_setattr,
 	.getattr     = ubifs_getattr,
