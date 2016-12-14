@@ -1871,8 +1871,8 @@ static void shmem_tag_pins(struct address_space *mapping)
 			continue;
 
 		spin_unlock_irq(&mapping->tree_lock);
+		slot = radix_tree_iter_resume(slot, &iter);
 		cond_resched();
-		slot = radix_tree_iter_next(&iter);
 		spin_lock_irq(&mapping->tree_lock);
 	}
 	spin_unlock_irq(&mapping->tree_lock);
@@ -1941,8 +1941,8 @@ static int shmem_wait_for_pins(struct address_space *mapping)
 			spin_unlock_irq(&mapping->tree_lock);
 continue_resched:
 			if (need_resched()) {
+				slot = radix_tree_iter_resume(slot, &iter);
 				cond_resched_rcu();
-				slot = radix_tree_iter_next(&iter);
 			}
 		}
 		rcu_read_unlock();
