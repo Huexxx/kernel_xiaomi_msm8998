@@ -195,7 +195,7 @@ int ovl_open_maybe_copy_up(struct dentry *dentry, unsigned int file_flags);
 bool ovl_is_private_xattr(const char *name);
 int ovl_update_time(struct inode *inode, struct timespec *ts, int flags);
 
-struct inode *ovl_new_inode(struct super_block *sb, umode_t mode);
+struct inode *ovl_new_inode(struct super_block *sb, umode_t mode, dev_t rdev);
 struct inode *ovl_get_inode(struct super_block *sb, struct inode *realinode);
 static inline void ovl_copyattr(struct inode *from, struct inode *to)
 {
