@@ -1365,7 +1365,11 @@ ssize_t vfs_copy_file_range(struct file *file_in, loff_t pos_in,
 	if (flags != 0)
 		return -EINVAL;
 
-	/* copy_file_range allows full ssize_t len, ignoring MAX_RW_COUNT  */
+	if (S_ISDIR(inode_in->i_mode) || S_ISDIR(inode_out->i_mode))
+		return -EISDIR;
+	if (!S_ISREG(inode_in->i_mode) || !S_ISREG(inode_out->i_mode))
+		return -EINVAL;
+
 	ret = rw_verify_area(READ, file_in, &pos_in, len);
 	if (ret >= 0)
 		ret = rw_verify_area(WRITE, file_out, &pos_out, len);
