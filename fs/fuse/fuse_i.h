@@ -323,7 +323,7 @@ struct fuse_req {
 	struct list_head intr_entry;
 
 	/** refcount */
-	atomic_t count;
+	refcount_t count;
 
 	bool user_pages;
 
