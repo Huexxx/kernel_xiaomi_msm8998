@@ -24,6 +24,7 @@
 #include <linux/workqueue.h>
 #include <linux/kref.h>
 #include <linux/xattr.h>
+#include <linux/refcount.h>
 #include <linux/user_namespace.h>
 
 /** Max number of pages that can be used in a single read request */
@@ -149,7 +150,7 @@ struct fuse_file {
 	u64 nodeid;
 
 	/** Refcount */
-	atomic_t count;
+	refcount_t count;
 
 	/** FOPEN_* flags returned by open */
 	u32 open_flags;
