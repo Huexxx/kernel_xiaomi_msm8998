@@ -452,7 +452,6 @@ long ext4_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
 	switch (cmd) {
 	case EXT4_IOC_GETFLAGS:
-		ext4_get_inode_flags(ei);
 		flags = ei->i_flags & EXT4_FL_USER_VISIBLE;
 		return put_user(flags, (int __user *) arg);
 	case EXT4_IOC_SETFLAGS: {
@@ -871,7 +870,6 @@ encryption_policy_out:
 		struct fsxattr fa;
 
 		memset(&fa, 0, sizeof(struct fsxattr));
-		ext4_get_inode_flags(ei);
 		fa.fsx_xflags = ext4_iflags_to_xflags(ei->i_flags & EXT4_FL_USER_VISIBLE);
 
 		if (EXT4_HAS_RO_COMPAT_FEATURE(inode->i_sb,
