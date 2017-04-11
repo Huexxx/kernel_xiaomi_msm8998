@@ -2145,8 +2145,7 @@ int dquot_disable(struct super_block *sb, int type, unsigned int flags)
 		/* This can happen when suspending quotas on remount-ro... */
 		if (toputinode[cnt] && !sb_has_quota_loaded(sb, cnt)) {
 			mutex_lock(&toputinode[cnt]->i_mutex);
-			toputinode[cnt]->i_flags &= ~(S_IMMUTABLE |
-				  S_NOATIME | S_NOQUOTA);
+			toputinode[cnt]->i_flags &= ~S_NOQUOTA;
 			truncate_inode_pages(&toputinode[cnt]->i_data, 0);
 			mutex_unlock(&toputinode[cnt]->i_mutex);
 			mark_inode_dirty_sync(toputinode[cnt]);
@@ -2194,7 +2193,6 @@ static int vfs_load_quota_inode(struct inode *inode, int type, int format_id,
 	struct super_block *sb = inode->i_sb;
 	struct quota_info *dqopt = sb_dqopt(sb);
 	int error;
-	int oldflags = -1;
 
 	if (!fmt)
 		return -ESRCH;
@@ -2242,9 +2240,7 @@ static int vfs_load_quota_inode(struct inode *inode, int type, int format_id,
 		 * possible) Also nobody should write to the file - we use
 		 * special IO operations which ignore the immutable bit. */
 		mutex_lock(&inode->i_mutex);
-		oldflags = inode->i_flags & (S_NOATIME | S_IMMUTABLE |
-					     S_NOQUOTA);
-		inode->i_flags |= S_NOQUOTA | S_NOATIME | S_IMMUTABLE;
+		inode->i_flags |= S_NOQUOTA;
 		mutex_unlock(&inode->i_mutex);
 		/*
 		 * When S_NOQUOTA is set, remove dquot references as no more
@@ -2286,14 +2282,9 @@ out_file_init:
 	dqopt->files[type] = NULL;
 	iput(inode);
 out_file_flags:
-	if (oldflags != -1) {
-		mutex_lock(&inode->i_mutex);
-		/* Set the flags back (in the case of accidental quotaon()
-		 * on a wrong file we don't want to mess up the flags) */
-		inode->i_flags &= ~(S_NOATIME | S_NOQUOTA | S_IMMUTABLE);
-		inode->i_flags |= oldflags;
-		mutex_unlock(&inode->i_mutex);
-	}
+	mutex_lock(&inode->i_mutex);
+	inode->i_flags &= ~S_NOQUOTA;
+	mutex_unlock(&inode->i_mutex);
 out_fmt:
 	put_quota_format(fmt);
 
