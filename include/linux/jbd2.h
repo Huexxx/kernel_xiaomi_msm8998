@@ -517,6 +517,8 @@ struct jbd2_journal_handle
 	unsigned long		h_start_jiffies;
 	unsigned int		h_requested_credits;
 
+	unsigned int		saved_alloc_context;
+
 #ifdef CONFIG_DEBUG_LOCK_ALLOC
 	struct lockdep_map	h_lockdep_map;
 #endif
