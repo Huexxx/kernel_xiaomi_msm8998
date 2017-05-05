@@ -53,12 +53,13 @@ out:
 	return err;
 }
 
-static int ovl_getattr(struct vfsmount *mnt, struct dentry *dentry,
-			 struct kstat *stat)
+int ovl_getattr(struct vfsmount *mnt, struct dentry *dentry,
+		struct kstat *stat)
 {
 	enum ovl_path_type type;
 	struct path realpath;
 	const struct cred *old_cred;
+	bool is_dir = S_ISDIR(dentry->d_inode->i_mode);
 	int err;
 
 	type = ovl_path_real(dentry, &realpath);
@@ -80,11 +81,13 @@ static int ovl_getattr(struct vfsmount *mnt, struct dentry *dentry,
 	if (ovl_same_sb(dentry->d_sb)) {
 		if (OVL_TYPE_ORIGIN(type)) {
 			struct kstat lowerstat;
-
+#if 0
+			u32 lowermask = STATX_INO | (!is_dir ? STATX_NLINK : 0);
+#endif
 			ovl_path_lower(dentry, &realpath);
 #if 0
 			err = vfs_getattr(&realpath, &lowerstat,
-					  STATX_INO | STATX_NLINK, flags);
+					  lowermask, flags);
 #else
 			err = vfs_getattr(&realpath, &lowerstat);
 #endif
@@ -97,11 +100,32 @@ static int ovl_getattr(struct vfsmount *mnt, struct dentry *dentry,
 			 * upper files, so we cannot use the lower origin st_ino
 			 * for those different files, even for the same fs case.
 			 */
-			if (lowerstat.nlink == 1)
+			if (is_dir || lowerstat.nlink == 1)
 				stat->ino = lowerstat.ino;
 		}
 		stat->dev = dentry->d_sb->s_dev;
+	} else if (is_dir) {
+		/*
+		 * If not all layers are on the same fs the pair {real st_ino;
+		 * overlay st_dev} is not unique, so use the non persistent
+		 * overlay st_ino.
+		 *
+		 * Always use the overlay st_dev for directories, so 'find
+		 * -xdev' will scan the entire overlay mount and won't cross the
+		 * overlay mount boundaries.
+		 */
+		stat->dev = dentry->d_sb->s_dev;
+		stat->ino = dentry->d_inode->i_ino;
 	}
+
+	/*
+	 * It's probably not worth it to count subdirs to get the
+	 * correct link count.  nlink=1 seems to pacify 'find' and
+	 * other utilities.
+	 */
+	if (is_dir && OVL_TYPE_MERGE(type))
+		stat->nlink = 1;
+
 out:
 	revert_creds(old_cred);
 
