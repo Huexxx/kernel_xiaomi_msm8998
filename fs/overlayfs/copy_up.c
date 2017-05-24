@@ -458,6 +458,11 @@ static int ovl_copy_up_one(struct dentry *parent, struct dentry *dentry,
 	ovl_path_upper(parent, &parentpath);
 	upperdir = parentpath.dentry;
 
+	/* Mark parent "impure" because it may now contain non-pure upper */
+	err = ovl_set_impure(parent, upperdir);
+	if (err)
+		return err;
+
 	err = vfs_getattr(&parentpath, &pstat);
 	if (err)
 		return err;
