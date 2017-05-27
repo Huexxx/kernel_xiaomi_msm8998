@@ -903,16 +903,6 @@ __be32 nfsd_readv(struct file *file, loff_t offset, struct kvec *vec, int vlen,
 	return nfsd_finish_read(file, count, host_err);
 }
 
-static __be32
-nfsd_vfs_read(struct svc_rqst *rqstp, struct file *file,
-	      loff_t offset, struct kvec *vec, int vlen, unsigned long *count)
-{
-	if (file->f_op->splice_read && test_bit(RQ_SPLICE_OK, &rqstp->rq_flags))
-		return nfsd_splice_read(rqstp, file, offset, count);
-	else
-		return nfsd_readv(file, offset, vec, vlen, count);
-}
-
 /*
  * Gathered writes: If another process is currently writing to the file,
  * there's a high chance this is another nfsd (triggered by a bulk write
@@ -1025,7 +1015,12 @@ __be32 nfsd_read(struct svc_rqst *rqstp, struct svc_fh *fhp,
 		return err;
 
 	ra = nfsd_init_raparms(file);
-	err = nfsd_vfs_read(rqstp, file, offset, vec, vlen, count);
+
+	if (file->f_op->splice_read && test_bit(RQ_SPLICE_OK, &rqstp->rq_flags))
+		err = nfsd_splice_read(rqstp, file, offset, count);
+	else
+		err = nfsd_readv(file, offset, vec, vlen, count);
+
 	if (ra)
 		nfsd_put_raparams(file, ra);
 	fput(file);
