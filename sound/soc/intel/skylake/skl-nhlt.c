@@ -20,8 +20,9 @@
 #include "skl.h"
 
 /* Unique identification for getting NHLT blobs */
-static u8 OSC_UUID[16] = {0x6E, 0x88, 0x9F, 0xA6, 0xEB, 0x6C, 0x94, 0x45,
-				0xA4, 0x1F, 0x7B, 0x5D, 0xCE, 0x24, 0xC5, 0x53};
+static guid_t osc_guid =
+	GUID_INIT(0xA69F886E, 0x6CEB, 0x4594,
+		  0xA4, 0x1F, 0x7B, 0x5D, 0xCE, 0x24, 0xC5, 0x53);
 
 #define DSDT_NHLT_PATH "\\_SB.PCI0.HDAS"
 
@@ -36,7 +37,7 @@ void *skl_nhlt_init(struct device *dev)
 		return NULL;
 	}
 
-	obj = acpi_evaluate_dsm(handle, OSC_UUID, 1, 1, NULL);
+	obj = acpi_evaluate_dsm(handle, &osc_guid, 1, 1, NULL);
 	if (obj && obj->type == ACPI_TYPE_BUFFER) {
 		nhlt_ptr = (struct nhlt_resource_desc  *)obj->buffer.pointer;
 

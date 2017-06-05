@@ -135,7 +135,7 @@ static int acpi_nfit_ctl(struct nvdimm_bus_descriptor *nd_desc,
 					in_buf.buffer.length), true);
 	}
 
-	out_obj = acpi_evaluate_dsm(handle, guid.b, 1, cmd, &in_obj);
+	out_obj = acpi_evaluate_dsm(handle, guid, 1, cmd, &in_obj);
 	if (!out_obj) {
 		dev_dbg(dev, "%s:%s _DSM failed cmd: %s\n", __func__, dimm_name,
 				cmd_name);
@@ -844,7 +844,7 @@ static int acpi_nfit_add_dimm(struct acpi_nfit_desc *acpi_desc,
 	}
 
 	for (i = ND_CMD_SMART; i <= ND_CMD_VENDOR; i++)
-		if (acpi_check_dsm(adev_dimm->handle, guid.b, 1, 1ULL << i))
+		if (acpi_check_dsm(adev_dimm->handle, guid, 1, 1ULL << i))
 			set_bit(i, &nfit_mem->dsm_mask);
 
 	return 0;
@@ -917,7 +917,7 @@ static void acpi_nfit_init_dsms(struct acpi_nfit_desc *acpi_desc)
 		return;
 
 	for (i = ND_CMD_ARS_CAP; i <= ND_CMD_ARS_STATUS; i++)
-		if (acpi_check_dsm(adev->handle, guid.b, 1, 1ULL << i))
+		if (acpi_check_dsm(adev->handle, guid, 1, 1ULL << i))
 			set_bit(i, &nd_desc->dsm_mask);
 }
 
