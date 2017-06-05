@@ -16,7 +16,6 @@
 #define __NFIT_H__
 #include <linux/libnvdimm.h>
 #include <linux/types.h>
-#include <linux/uuid.h>
 #include <linux/acpi.h>
 #include <acpi/acuuid.h>
 
@@ -184,7 +183,7 @@ static inline struct acpi_nfit_desc *to_acpi_desc(
 	return container_of(nd_desc, struct acpi_nfit_desc, nd_desc);
 }
 
-const u8 *to_nfit_uuid(enum nfit_uuids id);
+const guid_t *to_nfit_uuid(enum nfit_uuids id);
 int acpi_nfit_init(struct acpi_nfit_desc *nfit, acpi_size sz);
 extern const struct attribute_group *acpi_nfit_attribute_groups[];
 #endif /* __NFIT_H__ */
