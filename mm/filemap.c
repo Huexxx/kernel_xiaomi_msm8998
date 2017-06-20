@@ -1841,18 +1841,24 @@ generic_file_read_iter(struct kiocb *iocb, struct iov_iter *iter)
 		if (!count)
 			goto out; /* skip atime */
 		size = i_size_read(inode);
-		retval = filemap_write_and_wait_range(mapping, iocb->ki_pos,
-					iocb->ki_pos + count - 1);
-		if (!retval) {
-			struct iov_iter data = *iter;
-			retval = mapping->a_ops->direct_IO(iocb, &data);
-		}
+		if (iocb->ki_flags & IOCB_NOWAIT) {
+			if (filemap_range_has_page(mapping, iocb->ki_pos,
+						   iocb->ki_pos + count - 1))
+				return -EAGAIN;
+		} else {
+			retval = filemap_write_and_wait_range(mapping,
+						iocb->ki_pos,
+						iocb->ki_pos + count - 1);
+			if (!retval) {
+				struct iov_iter data = *iter;
+				retval = mapping->a_ops->direct_IO(iocb, &data);
+			}
 
-		if (retval > 0) {
-			iocb->ki_pos += retval;
-			iov_iter_advance(iter, retval);
+			if (retval > 0) {
+				iocb->ki_pos += retval;
+				iov_iter_advance(iter, retval);
+			}
 		}
-
 		/*
 		 * Btrfs can have a short DIO read if we encounter
 		 * compressed extents, so if there was an error, or if
@@ -1867,6 +1873,8 @@ generic_file_read_iter(struct kiocb *iocb, struct iov_iter *iter)
 			file_accessed(file);
 			goto out;
 		}
+
+
 	}
 
 	retval = do_generic_file_read(file, &iocb->ki_pos, iter, retval);
@@ -2441,6 +2449,9 @@ inline ssize_t generic_write_checks(struct kiocb *iocb, struct iov_iter *from)
 
 	pos = iocb->ki_pos;
 
+	if ((iocb->ki_flags & IOCB_NOWAIT) && !(iocb->ki_flags & IOCB_DIRECT))
+		return -EINVAL;
+
 	if (limit != RLIM_INFINITY) {
 		if (iocb->ki_pos >= limit) {
 			send_sig(SIGXFSZ, current, 0);
@@ -2510,9 +2521,17 @@ generic_file_direct_write(struct kiocb *iocb, struct iov_iter *from)
 	write_len = iov_iter_count(from);
 	end = (pos + write_len - 1) >> PAGE_CACHE_SHIFT;
 
-	written = filemap_write_and_wait_range(mapping, pos, pos + write_len - 1);
-	if (written)
-		goto out;
+	if (iocb->ki_flags & IOCB_NOWAIT) {
+		/* If there are pages to writeback, return */
+		if (filemap_range_has_page(inode->i_mapping, pos,
+					   pos + iov_iter_count(from)))
+			return -EAGAIN;
+	} else {
+		written = filemap_write_and_wait_range(mapping, pos,
+							pos + write_len - 1);
+		if (written)
+			goto out;
+	}
 
 	/*
 	 * After a write we want buffered reads to be sure to go to disk to get
