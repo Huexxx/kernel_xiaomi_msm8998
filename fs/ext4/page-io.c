@@ -358,6 +358,7 @@ void ext4_io_submit(struct ext4_io_submit *io)
 	if (bio) {
 		int io_op = io->io_wbc->sync_mode == WB_SYNC_ALL ?
 			    WRITE_SYNC : WRITE;
+		io->io_bio->bi_write_hint = io->io_end->inode->i_write_hint;
 		bio_get(io->io_bio);
 		submit_bio(io_op, io->io_bio);
 		bio_put(io->io_bio);
@@ -406,6 +407,7 @@ submit_and_retry:
 		ret = io_submit_init_bio(io, bh);
 		if (ret)
 			return ret;
+		io->io_bio->bi_write_hint = inode->i_write_hint;
 	}
 	ret = bio_add_page(io->io_bio, page, bh->b_size, bh_offset(bh));
 	if (ret != bh->b_size)
