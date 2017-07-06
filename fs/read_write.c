@@ -30,7 +30,7 @@ const struct file_operations generic_ro_fops = {
 
 EXPORT_SYMBOL(generic_ro_fops);
 
-static inline int unsigned_offsets(struct file *file)
+static inline bool unsigned_offsets(struct file *file)
 {
 	return file->f_mode & FMODE_UNSIGNED_OFFSET;
 }
@@ -605,7 +605,7 @@ unsigned long iov_shorten(struct iovec *iov, unsigned long nr_segs, size_t to)
 EXPORT_SYMBOL(iov_shorten);
 
 static ssize_t do_iter_readv_writev(struct file *filp, struct iov_iter *iter,
-		loff_t *ppos, int type, int flags)
+		loff_t *ppos, int type, rwf_t flags)
 {
 	struct kiocb kiocb;
 	ssize_t ret;
@@ -627,7 +627,7 @@ static ssize_t do_iter_readv_writev(struct file *filp, struct iov_iter *iter,
 
 /* Do it by hand, with file-ops */
 static ssize_t do_loop_readv_writev(struct file *filp, struct iov_iter *iter,
-		loff_t *ppos, int type, int flags)
+		loff_t *ppos, int type, rwf_t flags)
 {
 	ssize_t ret = 0;
 
@@ -739,7 +739,7 @@ out:
 }
 
 static ssize_t do_iter_read(struct file *file, struct iov_iter *iter,
-		loff_t *pos, int flags)
+		loff_t *pos, rwf_t flags)
 {
 	size_t tot_len;
 	ssize_t ret = 0;
@@ -767,7 +767,7 @@ out:
 }
 
 ssize_t vfs_iter_read(struct file *file, struct iov_iter *iter, loff_t *ppos,
-		int flags)
+		rwf_t flags)
 {
 	if (!file->f_op->read_iter)
 		return -EINVAL;
@@ -776,7 +776,7 @@ ssize_t vfs_iter_read(struct file *file, struct iov_iter *iter, loff_t *ppos,
 EXPORT_SYMBOL(vfs_iter_read);
 
 static ssize_t do_iter_write(struct file *file, struct iov_iter *iter,
-		loff_t *pos, int flags)
+		loff_t *pos, rwf_t flags)
 {
 	size_t tot_len;
 	ssize_t ret = 0;
@@ -805,7 +805,7 @@ static ssize_t do_iter_write(struct file *file, struct iov_iter *iter,
 }
 
 ssize_t vfs_iter_write(struct file *file, struct iov_iter *iter, loff_t *ppos,
-		int flags)
+		rwf_t flags)
 {
 	if (!file->f_op->write_iter)
 		return -EINVAL;
@@ -814,7 +814,7 @@ ssize_t vfs_iter_write(struct file *file, struct iov_iter *iter, loff_t *ppos,
 EXPORT_SYMBOL(vfs_iter_write);
 
 ssize_t vfs_readv(struct file *file, const struct iovec __user *vec,
-		  unsigned long vlen, loff_t *pos, int flags)
+		  unsigned long vlen, loff_t *pos, rwf_t flags)
 {
 	struct iovec iovstack[UIO_FASTIOV];
 	struct iovec *iov = iovstack;
@@ -832,7 +832,7 @@ ssize_t vfs_readv(struct file *file, const struct iovec __user *vec,
 EXPORT_SYMBOL(vfs_readv);
 
 ssize_t vfs_writev(struct file *file, const struct iovec __user *vec,
-		   unsigned long vlen, loff_t *pos, int flags)
+		   unsigned long vlen, loff_t *pos, rwf_t flags)
 {
 	struct iovec iovstack[UIO_FASTIOV];
 	struct iovec *iov = iovstack;
@@ -849,7 +849,7 @@ ssize_t vfs_writev(struct file *file, const struct iovec __user *vec,
 EXPORT_SYMBOL(vfs_writev);
 
 static ssize_t do_readv(unsigned long fd, const struct iovec __user *vec,
-			unsigned long vlen, int flags)
+			unsigned long vlen, rwf_t flags)
 {
 	struct fd f = fdget_pos(fd);
 	ssize_t ret = -EBADF;
@@ -869,7 +869,7 @@ static ssize_t do_readv(unsigned long fd, const struct iovec __user *vec,
 }
 
 static ssize_t do_writev(unsigned long fd, const struct iovec __user *vec,
-			 unsigned long vlen, int flags)
+			 unsigned long vlen, rwf_t flags)
 {
 	struct fd f = fdget_pos(fd);
 	ssize_t ret = -EBADF;
@@ -895,7 +895,7 @@ static inline loff_t pos_from_hilo(unsigned long high, unsigned long low)
 }
 
 static ssize_t do_preadv(unsigned long fd, const struct iovec __user *vec,
-			 unsigned long vlen, loff_t pos, int flags)
+			 unsigned long vlen, loff_t pos, rwf_t flags)
 {
 	struct fd f;
 	ssize_t ret = -EBADF;
@@ -918,7 +918,7 @@ static ssize_t do_preadv(unsigned long fd, const struct iovec __user *vec,
 }
 
 static ssize_t do_pwritev(unsigned long fd, const struct iovec __user *vec,
-			  unsigned long vlen, loff_t pos, int flags)
+			  unsigned long vlen, loff_t pos, rwf_t flags)
 {
 	struct fd f;
 	ssize_t ret = -EBADF;
@@ -962,7 +962,7 @@ SYSCALL_DEFINE5(preadv, unsigned long, fd, const struct iovec __user *, vec,
 
 SYSCALL_DEFINE6(preadv2, unsigned long, fd, const struct iovec __user *, vec,
 		unsigned long, vlen, unsigned long, pos_l, unsigned long, pos_h,
-		int, flags)
+		rwf_t, flags)
 {
 	loff_t pos = pos_from_hilo(pos_h, pos_l);
 
@@ -982,7 +982,7 @@ SYSCALL_DEFINE5(pwritev, unsigned long, fd, const struct iovec __user *, vec,
 
 SYSCALL_DEFINE6(pwritev2, unsigned long, fd, const struct iovec __user *, vec,
 		unsigned long, vlen, unsigned long, pos_l, unsigned long, pos_h,
-		int, flags)
+		rwf_t, flags)
 {
 	loff_t pos = pos_from_hilo(pos_h, pos_l);
 
@@ -995,7 +995,7 @@ SYSCALL_DEFINE6(pwritev2, unsigned long, fd, const struct iovec __user *, vec,
 #ifdef CONFIG_COMPAT
 static size_t compat_readv(struct file *file,
 			   const struct compat_iovec __user *vec,
-			   unsigned long vlen, loff_t *pos, int flags)
+			   unsigned long vlen, loff_t *pos, rwf_t flags)
 {
 	struct iovec iovstack[UIO_FASTIOV];
 	struct iovec *iov = iovstack;
@@ -1015,7 +1015,7 @@ static size_t compat_readv(struct file *file,
 
 static size_t do_compat_readv(compat_ulong_t fd,
 				 const struct compat_iovec __user *vec,
-				 compat_ulong_t vlen, int flags)
+				 compat_ulong_t vlen, rwf_t flags)
 {
 	struct fd f = fdget_pos(fd);
 	ssize_t ret;
@@ -1041,7 +1041,7 @@ COMPAT_SYSCALL_DEFINE3(readv, compat_ulong_t, fd,
 
 static long do_compat_preadv64(unsigned long fd,
 				  const struct compat_iovec __user *vec,
-				  unsigned long vlen, loff_t pos, int flags)
+				  unsigned long vlen, loff_t pos, rwf_t flags)
 {
 	struct fd f;
 	ssize_t ret;
@@ -1079,7 +1079,7 @@ COMPAT_SYSCALL_DEFINE5(preadv, compat_ulong_t, fd,
 COMPAT_SYSCALL_DEFINE6(preadv2, compat_ulong_t, fd,
 		const struct compat_iovec __user *,vec,
 		compat_ulong_t, vlen, u32, pos_low, u32, pos_high,
-		int, flags)
+		rwf_t, flags)
 {
 	loff_t pos = ((loff_t)pos_high << 32) | pos_low;
 
@@ -1091,7 +1091,7 @@ COMPAT_SYSCALL_DEFINE6(preadv2, compat_ulong_t, fd,
 
 static size_t compat_writev(struct file *file,
 			    const struct compat_iovec __user *vec,
-			    unsigned long vlen, loff_t *pos, int flags)
+			    unsigned long vlen, loff_t *pos, rwf_t flags)
 {
 	struct iovec iovstack[UIO_FASTIOV];
 	struct iovec *iov = iovstack;
@@ -1111,7 +1111,7 @@ static size_t compat_writev(struct file *file,
 
 static size_t do_compat_writev(compat_ulong_t fd,
 				  const struct compat_iovec __user* vec,
-				  compat_ulong_t vlen, int flags)
+				  compat_ulong_t vlen, rwf_t flags)
 {
 	struct fd f = fdget_pos(fd);
 	ssize_t ret;
@@ -1136,7 +1136,7 @@ COMPAT_SYSCALL_DEFINE3(writev, compat_ulong_t, fd,
 
 static long do_compat_pwritev64(unsigned long fd,
 				   const struct compat_iovec __user *vec,
-				   unsigned long vlen, loff_t pos, int flags)
+				   unsigned long vlen, loff_t pos, rwf_t flags)
 {
 	struct fd f;
 	ssize_t ret;
@@ -1173,7 +1173,7 @@ COMPAT_SYSCALL_DEFINE5(pwritev, compat_ulong_t, fd,
 
 COMPAT_SYSCALL_DEFINE6(pwritev2, compat_ulong_t, fd,
 		const struct compat_iovec __user *,vec,
-		compat_ulong_t, vlen, u32, pos_low, u32, pos_high, int, flags)
+		compat_ulong_t, vlen, u32, pos_low, u32, pos_high, rwf_t, flags)
 {
 	loff_t pos = ((loff_t)pos_high << 32) | pos_low;
 
