@@ -693,7 +693,8 @@ static int virq_debug_show(struct seq_file *m, void *private)
 	struct irq_desc *desc;
 	struct irq_domain *domain;
 	struct radix_tree_iter iter;
-	void *data, **slot;
+	void *data;
+	void __rcu **slot;
 	int i;
 
 	seq_printf(m, " %-16s  %-6s  %-10s  %-10s  %s\n",
