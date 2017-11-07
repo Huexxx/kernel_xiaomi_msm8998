@@ -62,6 +62,7 @@
 #define BUG_ON(cond) assert(!(cond))
 #endif
 #endif
+#define BUG()	BUG_ON(1)
 
 /*
  * Both need more care to handle endianness
