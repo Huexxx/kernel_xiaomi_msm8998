@@ -10,6 +10,7 @@
 int __bitmap_weight(const unsigned long *bitmap, int bits);
 void __bitmap_or(unsigned long *dst, const unsigned long *bitmap1,
 		 const unsigned long *bitmap2, int bits);
+void bitmap_clear(unsigned long *map, unsigned int start, int len);
 
 #define BITMAP_LAST_WORD_MASK(nbits)					\
 (									\
