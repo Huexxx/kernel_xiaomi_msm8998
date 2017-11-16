@@ -27,6 +27,7 @@
 #include <linux/slab.h>
 #include <linux/pmem.h>
 #include <linux/nd.h>
+#include <linux/backing-dev.h>
 #include "pfn.h"
 #include "nd.h"
 
@@ -191,6 +192,7 @@ static int pmem_attach_disk(struct device *dev,
 	disk->private_data	= pmem;
 	disk->queue		= pmem->pmem_queue;
 	disk->flags		= GENHD_FL_EXT_DEVT;
+	disk->queue->backing_dev_info->capabilities |= BDI_CAP_SYNCHRONOUS_IO;
 	nvdimm_namespace_disk_name(ndns, disk->disk_name);
 	disk->driverfs_dev = dev;
 	set_capacity(disk, (pmem->size - pmem->data_offset) / 512);
