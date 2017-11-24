@@ -483,6 +483,8 @@ workqueue.txt
 	- information on the Concurrency Managed Workqueue implementation
 x86/x86_64/
 	- directory with info on Linux support for AMD x86-64 (Hammer) machines.
+xarray.txt
+	- Documentation on how to use the XArray
 xillybus.txt
 	- Overview and basic ui of xillybus driver
 xtensa/
