@@ -159,7 +159,11 @@ int idr_for_each(const struct idr *idr,
 	void __rcu **slot;
 
 	radix_tree_for_each_slot(slot, &idr->idr_rt, &iter, 0) {
-		int ret = fn(iter.index, rcu_dereference_raw(*slot), data);
+		int ret;
+
+		if (WARN_ON_ONCE(iter.index > INT_MAX))
+			break;
+		ret = fn(iter.index, rcu_dereference_raw(*slot), data);
 		if (ret)
 			return ret;
 	}
