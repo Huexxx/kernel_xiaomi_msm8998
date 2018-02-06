@@ -225,6 +225,8 @@ x86/i386/
 	- directory with info about Linux on Intel 32 bit architecture.
 ia64/
 	- directory with info about Linux on Intel 64 bit architecture.
+idr.txt
+	- ID Allocation
 infiniband/
 	- directory with documents concerning Linux InfiniBand support.
 init.txt
