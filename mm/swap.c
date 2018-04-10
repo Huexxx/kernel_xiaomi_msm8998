@@ -1158,7 +1158,7 @@ void __init swap_setup(void)
 	int i;
 
 	for (i = 0; i < MAX_SWAPFILES; i++)
-		spin_lock_init(&swapper_spaces[i].tree_lock);
+		spin_lock_init(&swapper_spaces[i].i_pages.xa_lock);
 #endif
 
 	/*

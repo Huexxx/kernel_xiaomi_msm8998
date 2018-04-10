@@ -35,7 +35,7 @@ static const struct address_space_operations swap_aops = {
 
 struct address_space swapper_spaces[MAX_SWAPFILES] = {
 	[0 ... MAX_SWAPFILES - 1] = {
-		.page_tree	= RADIX_TREE_INIT(GFP_ATOMIC|__GFP_NOWARN),
+		.i_pages	= RADIX_TREE_INIT(swapper_spaces.i_pages, GFP_ATOMIC|__GFP_NOWARN),
 		.i_mmap_writable = ATOMIC_INIT(0),
 		.a_ops		= &swap_aops,
 		/* swap cache doesn't use writeback related tags */
