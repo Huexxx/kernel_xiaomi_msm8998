@@ -12,6 +12,7 @@
 #include <linux/list_lru.h>
 #include <linux/llist.h>
 #include <linux/radix-tree.h>
+#include <linux/xarray.h>
 #include <linux/rbtree.h>
 #include <linux/init.h>
 #include <linux/pid.h>
@@ -461,12 +462,11 @@ int pagecache_write_end(struct file *, struct address_space *mapping,
 
 struct address_space {
 	struct inode		*host;		/* owner: inode, block_device */
-	struct radix_tree_root	page_tree;	/* radix tree of all pages */
-	spinlock_t		tree_lock;	/* and lock protecting it */
+	struct radix_tree_root	i_pages;	/* cached pages */
 	atomic_t		i_mmap_writable;/* count VM_SHARED mappings */
 	struct rb_root		i_mmap;		/* tree of private and shared mappings */
 	struct rw_semaphore	i_mmap_rwsem;	/* protect tree, count, list */
-	/* Protected by tree_lock together with the radix tree */
+	/* Protected by the i_pages lock */
 	unsigned long		nrpages;	/* number of total pages */
 	unsigned long		nrshadows;	/* number of shadow entries */
 	pgoff_t			writeback_index;/* writeback starts here */
@@ -2017,7 +2017,7 @@ static inline void init_sync_kiocb(struct kiocb *kiocb, struct file *filp)
  *
  * I_WB_SWITCH		Cgroup bdi_writeback switching in progress.  Used to
  *			synchronize competing switching instances and to tell
- *			wb stat updates to grab mapping->tree_lock.  See
+ *			wb stat updates to grab the i_pages lock.  See
  *			inode_switch_wb_work_fn() for details.
  *
  * I_SYNC_QUEUED	Inode is queued in b_io or b_more_io writeback lists.

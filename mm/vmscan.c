@@ -700,7 +700,7 @@ static int __remove_mapping(struct address_space *mapping, struct page *page,
 	BUG_ON(!PageLocked(page));
 	BUG_ON(mapping != page_mapping(page));
 
-	spin_lock_irqsave(&mapping->tree_lock, flags);
+	xa_lock_irqsave(&mapping->i_pages, flags);
 	/*
 	 * The non racy check for a busy page.
 	 *
@@ -724,7 +724,7 @@ static int __remove_mapping(struct address_space *mapping, struct page *page,
 	 * load is not satisfied before that of page->_count.
 	 *
 	 * Note that if SetPageDirty is always performed via set_page_dirty,
-	 * and thus under tree_lock, then this ordering is not required.
+	 * and thus under the i_pages lock, then this ordering is not required.
 	 */
 	if (!page_freeze_refs(page, 2))
 		goto cannot_free;
@@ -738,7 +738,7 @@ static int __remove_mapping(struct address_space *mapping, struct page *page,
 		swp_entry_t swap = { .val = page_private(page) };
 		mem_cgroup_swapout(page, swap);
 		__delete_from_swap_cache(page);
-		spin_unlock_irqrestore(&mapping->tree_lock, flags);
+		xa_unlock_irqrestore(&mapping->i_pages, flags);
 		swapcache_free(swap);
 	} else {
 		void (*freepage)(struct page *);
@@ -759,7 +759,7 @@ static int __remove_mapping(struct address_space *mapping, struct page *page,
 		    !mapping_exiting(mapping))
 			shadow = workingset_eviction(mapping, page);
 		__delete_from_page_cache(page, shadow);
-		spin_unlock_irqrestore(&mapping->tree_lock, flags);
+		xa_unlock_irqrestore(&mapping->i_pages, flags);
 
 		if (freepage != NULL)
 			freepage(page);
@@ -768,7 +768,7 @@ static int __remove_mapping(struct address_space *mapping, struct page *page,
 	return 1;
 
 cannot_free:
-	spin_unlock_irqrestore(&mapping->tree_lock, flags);
+	xa_unlock_irqrestore(&mapping->i_pages, flags);
 	return 0;
 }
 
