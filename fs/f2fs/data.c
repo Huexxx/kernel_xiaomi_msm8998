@@ -506,7 +506,8 @@ int f2fs_submit_page_bio(struct f2fs_io_info *fio)
 	bio = __bio_alloc(fio, 1);
 
 	if (f2fs_may_encrypt_bio(inode, fio))
-	fscrypt_set_ice_dun(inode, bio, PG_DUN(inode, fio->page));
+		fscrypt_set_ice_dun(inode, bio, PG_DUN(inode, fio->page));
+	fscrypt_set_ice_skip(bio, fio->encrypted_page ? 1 : 0);
 
 	if (bio_add_page(bio, page, PAGE_SIZE, 0) < PAGE_SIZE) {
 		bio_put(bio);
@@ -700,6 +701,7 @@ int f2fs_merge_page_bio(struct f2fs_io_info *fio)
 
 	inode = fio->page->mapping->host;
 	dun = PG_DUN(inode, fio->page);
+	bi_crypt_skip = fio->encrypted_page ? 1 : 0;
 	bio_encrypted = f2fs_may_encrypt_bio(inode, fio);
 
 	if (bio && !page_is_mergeable(fio->sbi, bio, *fio->last_block,
@@ -741,6 +743,7 @@ void f2fs_submit_page_write(struct f2fs_io_info *fio)
 	struct page *bio_page;
 	struct inode *inode;
 	bool bio_encrypted;
+	int bi_crypt_skip;
 	u64 dun;
 
 	f2fs_bug_on(sbi, is_read_io(fio->op));
@@ -764,6 +767,7 @@ next:
 	bio_page = fio->encrypted_page ? fio->encrypted_page : fio->page;
 	inode = fio->page->mapping->host;
 	dun = PG_DUN(inode, fio->page);
+	bi_crypt_skip = fio->encrypted_page ? 1 : 0;
 	bio_encrypted = f2fs_may_encrypt_bio(inode, fio);
 
 	/* set submitted = true as a return value */
@@ -776,7 +780,7 @@ next:
 		__submit_merged_bio(io);
 
 	/* ICE support */
-	if (!fscrypt_mergeable_bio(io->bio, dun, bio_encrypted))
+	if (!fscrypt_mergeable_bio(io->bio, dun, bio_encrypted, bi_crypt_skip))
 		__submit_merged_bio(io);
 
 alloc_new:
@@ -791,6 +795,7 @@ alloc_new:
 		io->bio = __bio_alloc(fio, BIO_MAX_PAGES);
 		if (bio_encrypted)
 			fscrypt_set_ice_dun(inode, io->bio, dun);
+		fscrypt_set_ice_skip(io->bio, bi_crypt_skip);
 		io->fio = *fio;
 	}
 
@@ -1851,7 +1856,7 @@ submit_and_realloc:
 
 	dun = PG_DUN(inode, page);
 	bio_encrypted = f2fs_may_encrypt_bio(inode, NULL);
-	if (!fscrypt_mergeable_bio(bio, dun, bio_encrypted)) {
+	if (!fscrypt_mergeable_bio(bio, dun, bio_encrypted, 0)) {
 		__submit_bio(F2FS_I_SB(inode), bio, DATA);
 		bio = NULL;
 	}
