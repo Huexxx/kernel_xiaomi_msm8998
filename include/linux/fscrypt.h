@@ -235,12 +235,6 @@ extern void fscrypt_enqueue_decrypt_bio(struct fscrypt_ctx *ctx,
 extern int fscrypt_zeroout_range(const struct inode *, pgoff_t, sector_t,
 				 unsigned int);
 
-/* fscrypt_ice.c */
-extern int fscrypt_using_hardware_encryption(const struct inode *inode);
-extern void fscrypt_set_ice_dun(const struct inode *inode,
-		struct bio *bio, u64 dun);
-extern bool fscrypt_mergeable_bio(struct bio *bio, u64 dun, bool bio_encrypted);
-
 /* hooks.c */
 extern int fscrypt_file_open(struct inode *inode, struct file *filp);
 extern int __fscrypt_prepare_link(struct inode *inode, struct inode *dir,
@@ -427,21 +421,6 @@ static inline int fscrypt_zeroout_range(const struct inode *inode, pgoff_t lblk,
 					sector_t pblk, unsigned int len)
 {
 	return -EOPNOTSUPP;
-}
-
-/* fscrypt_ice.c */
-static inline int fscrypt_using_hardware_encryption(const struct inode *inode)
-{
-	return 0;
-}
-
-static inline void fscrypt_set_ice_dun(const struct inode *inode,
-		struct bio *bio, u64 dun){}
-
-static inline bool fscrypt_mergeable_bio(struct bio *bio,
-		sector_t iv_block, bool bio_encrypted)
-{
-	return true;
 }
 
 /* hooks.c */
@@ -718,5 +697,30 @@ static inline void fscrypt_finalize_bounce_page(struct page **pagep)
 		fscrypt_free_bounce_page(page);
 	}
 }
+
+/* fscrypt_ice.c */
+#ifdef CONFIG_PFK
+extern int fscrypt_using_hardware_encryption(const struct inode *inode);
+extern void fscrypt_set_ice_dun(const struct inode *inode,
+	struct bio *bio, u64 dun);
+extern bool fscrypt_mergeable_bio(struct bio *bio, u64 dun, bool bio_encrypted);
+#else
+static inline int fscrypt_using_hardware_encryption(const struct inode *inode)
+{
+	return 0;
+}
+
+static inline void fscrypt_set_ice_dun(const struct inode *inode,
+	struct bio *bio, u64 dun)
+{
+	return;
+}
+
+static inline bool fscrypt_mergeable_bio(struct bio *bio,
+	u64 dun, bool bio_encrypted)
+{
+	return true;
+}
+#endif
 
 #endif	/* _LINUX_FSCRYPT_H */
