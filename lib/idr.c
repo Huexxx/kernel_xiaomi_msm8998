@@ -374,7 +374,7 @@ EXPORT_SYMBOL(idr_replace);
 
 #define IDA_MAX (0x80000000U / IDA_BITMAP_BITS - 1)
 
-static int ida_get_new_above(struct ida *ida, int start, int *id)
+static int ida_get_new_above(struct ida *ida, int start)
 {
 	struct radix_tree_root *root = &ida->ida_rt;
 	void __rcu **slot;
@@ -413,8 +413,8 @@ static int ida_get_new_above(struct ida *ida, int start, int *id)
 			if (ebit < BITS_PER_LONG) {
 				tmp |= 1UL << ebit;
 				rcu_assign_pointer(*slot, (void *)tmp);
-				*id = new + ebit - RADIX_TREE_EXCEPTIONAL_SHIFT;
-				return 0;
+				return new + ebit -
+					RADIX_TREE_EXCEPTIONAL_SHIFT;
 			}
 			bitmap = this_cpu_xchg(ida_bitmap, NULL);
 			if (!bitmap)
@@ -445,8 +445,7 @@ static int ida_get_new_above(struct ida *ida, int start, int *id)
 						RADIX_TREE_EXCEPTIONAL_ENTRY);
 				radix_tree_iter_replace(root, &iter, slot,
 						bitmap);
-				*id = new;
-				return 0;
+				return new;
 			}
 			bitmap = this_cpu_xchg(ida_bitmap, NULL);
 			if (!bitmap)
@@ -455,8 +454,7 @@ static int ida_get_new_above(struct ida *ida, int start, int *id)
 			radix_tree_iter_replace(root, &iter, slot, bitmap);
 		}
 
-		*id = new;
-		return 0;
+		return new;
 	}
 }
 
@@ -545,7 +543,7 @@ EXPORT_SYMBOL(ida_destroy);
 int ida_alloc_range(struct ida *ida, unsigned int min, unsigned int max,
 			gfp_t gfp)
 {
-	int ret, id = 0;
+	int id = 0;
 	unsigned long flags;
 
 	if ((int)min < 0)
@@ -556,24 +554,20 @@ int ida_alloc_range(struct ida *ida, unsigned int min, unsigned int max,
 
 again:
 	xa_lock_irqsave(&ida->ida_rt, flags);
-	ret = ida_get_new_above(ida, min, &id);
-	if (!ret) {
-		if (id > max) {
-			ida_remove(ida, id);
-			ret = -ENOSPC;
-		} else {
-			ret = id;
-		}
+	id = ida_get_new_above(ida, min);
+	if (id > (int)max) {
+		ida_remove(ida, id);
+		id = -ENOSPC;
 	}
 	xa_unlock_irqrestore(&ida->ida_rt, flags);
 
-	if (unlikely(ret == -EAGAIN)) {
+	if (unlikely(id == -EAGAIN)) {
 		if (!ida_pre_get(ida, gfp))
 			return -ENOMEM;
 		goto again;
 	}
 
-	return ret;
+	return id;
 }
 EXPORT_SYMBOL(ida_alloc_range);
 
