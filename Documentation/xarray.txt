@@ -101,12 +101,25 @@ Finally, you can remove all entries from an XArray by calling
 to free the entries first.  You can do this by iterating over all present
 entries in the XArray using the `xa_for_each` iterator.
 
+ID assignment
+-------------
+
+You can call `xa_alloc` to store the entry at any unused index
+in the XArray.  If you need to modify the array from interrupt context,
+you can use `xa_alloc_bh` or `xa_alloc_irq` to disable
+interrupts while allocating the ID.  Unlike `xa_store`, allocating
+a ``NULL`` pointer does not delete an entry.  Instead it reserves an
+entry like `xa_reserve` and you can release it using either
+`xa_erase` or `xa_release`.  To use ID assignment, the
+XArray must be defined with `DEFINE_XARRAY_ALLOC`, or initialised
+by passing ``XA_FLAGS_ALLOC`` to `xa_init_flags`,
+
 Memory allocation
 -----------------
 
-The `xa_store`, `xa_cmpxchg`, `xa_reserve`
-and `xa_insert` functions take a gfp_t parameter in case
-the XArray needs to allocate memory to store this entry.
+The `xa_store`, `xa_cmpxchg`, `xa_alloc`,
+`xa_reserve` and `xa_insert` functions take a gfp_t
+parameter in case the XArray needs to allocate memory to store this entry.
 If the entry is being deleted, no memory allocation needs to be performed,
 and the GFP flags specified will be ignored.
 
@@ -141,6 +154,9 @@ Takes xa_lock internally:
  * `xa_erase_bh`
  * `xa_erase_irq`
  * `xa_cmpxchg`
+ * `xa_alloc`
+ * `xa_alloc_bh`
+ * `xa_alloc_irq`
  * `xa_destroy`
  * `xa_set_mark`
  * `xa_clear_mark`
@@ -150,6 +166,7 @@ Assumes xa_lock held on entry:
  * `__xa_insert`
  * `__xa_erase`
  * `__xa_cmpxchg`
+ * `__xa_alloc`
  * `__xa_set_mark`
  * `__xa_clear_mark`
 
