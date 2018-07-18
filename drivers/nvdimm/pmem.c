@@ -47,14 +47,14 @@ struct pmem_device {
 static int pmem_major;
 
 static void pmem_do_bvec(struct pmem_device *pmem, struct page *page,
-			unsigned int len, unsigned int off, bool is_write,
+			unsigned int len, unsigned int off, unsigned int op,
 			sector_t sector)
 {
 	void *mem = kmap_atomic(page);
 	phys_addr_t pmem_off = sector * 512 + pmem->data_offset;
 	void __pmem *pmem_addr = pmem->virt_addr + pmem_off;
 
-	if (!is_write) {
+	if (!op_is_write(op)) {
 		memcpy_from_pmem(mem + off, pmem_addr, len);
 		flush_dcache_page(page);
 	} else {
@@ -77,7 +77,7 @@ static blk_qc_t pmem_make_request(struct request_queue *q, struct bio *bio)
 	do_acct = nd_iostat_start(bio, &start);
 	bio_for_each_segment(bvec, bio, iter)
 		pmem_do_bvec(pmem, bvec.bv_page, bvec.bv_len, bvec.bv_offset,
-				op_is_write(bio_op(bio)), iter.bi_sector);
+				bio_op(bio), iter.bi_sector);
 	if (do_acct)
 		nd_iostat_end(bio, start);
 
@@ -89,14 +89,14 @@ static blk_qc_t pmem_make_request(struct request_queue *q, struct bio *bio)
 }
 
 static int pmem_rw_page(struct block_device *bdev, sector_t sector,
-		       struct page *page, bool is_write)
+		       struct page *page, unsigned int op)
 {
 	struct pmem_device *pmem = bdev->bd_disk->private_data;
 
-	pmem_do_bvec(pmem, page, PAGE_SIZE, 0, is_write, sector);
+	pmem_do_bvec(pmem, page, PAGE_SIZE, 0, op, sector);
 	if (is_write)
 		wmb_pmem();
-	page_endio(page, is_write, 0);
+	page_endio(page, op, 0);
 
 	return 0;
 }
@@ -205,7 +205,7 @@ static int pmem_attach_disk(struct device *dev,
 }
 
 static int pmem_rw_bytes(struct nd_namespace_common *ndns,
-		resource_size_t offset, void *buf, size_t size, bool is_write)
+		resource_size_t offset, void *buf, size_t size, unsigned int op)
 {
 	struct pmem_device *pmem = dev_get_drvdata(ndns->claim);
 
@@ -214,7 +214,7 @@ static int pmem_rw_bytes(struct nd_namespace_common *ndns,
 		return -EFAULT;
 	}
 
-	if (!is_write)
+	if (!op_is_write(op))
 		memcpy_from_pmem(buf, pmem->virt_addr + offset, size);
 	else {
 		memcpy_to_pmem(pmem->virt_addr + offset, buf, size);
