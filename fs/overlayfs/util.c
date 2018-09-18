@@ -437,7 +437,7 @@ static void ovl_cleanup_index(struct dentry *dentry)
 	struct dentry *upperdentry = ovl_dentry_upper(dentry);
 	struct dentry *index = NULL;
 	struct inode *inode;
-	struct qstr name;
+	struct qstr name = { };
 	int err;
 
 	err = ovl_get_index_name(lowerdentry, &name);
@@ -476,6 +476,7 @@ static void ovl_cleanup_index(struct dentry *dentry)
 		goto fail;
 
 out:
+	kfree(name.name);
 	dput(index);
 	return;
 
