@@ -103,6 +103,15 @@ may result in the entry being marked at some, but not all of the other
 indices.  Storing into one index may result in the entry retrieved by
 some, but not all of the other indices changing.
 
+Sometimes you need to ensure that a subsequent call to `xa_store`
+will not need to allocate memory.  The `xa_reserve` function
+will store a reserved entry at the indicated index.  Users of the normal
+API will see this entry as containing ``NULL``.  If you do not need to
+use the reserved entry, you can call `xa_release` to remove the
+unused entry.  If another user has stored to the entry in the meantime,
+`xa_release` will do nothing; if instead you want the entry to
+become ``NULL``, you should use `xa_erase`.
+
 Finally, you can remove all entries from an XArray by calling
 `xa_destroy`.  If the XArray entries are pointers, you may wish
 to free the entries first.  You can do this by iterating over all present
@@ -165,6 +174,9 @@ Takes xa_lock internally:
  * `xa_alloc`
  * `xa_alloc_bh`
  * `xa_alloc_irq`
+ * `xa_reserve`
+ * `xa_reserve_bh`
+ * `xa_reserve_irq`
  * `xa_destroy`
  * `xa_set_mark`
  * `xa_clear_mark`
@@ -175,6 +187,7 @@ Assumes xa_lock held on entry:
  * `__xa_erase`
  * `__xa_cmpxchg`
  * `__xa_alloc`
+ * `__xa_reserve`
  * `__xa_set_mark`
  * `__xa_clear_mark`
 
