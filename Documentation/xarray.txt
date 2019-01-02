@@ -106,12 +106,13 @@ some, but not all of the other indices changing.
 
 Sometimes you need to ensure that a subsequent call to `xa_store`
 will not need to allocate memory.  The `xa_reserve` function
-will store a reserved entry at the indicated index.  Users of the normal
-API will see this entry as containing ``NULL``.  If you do not need to
-use the reserved entry, you can call `xa_release` to remove the
-unused entry.  If another user has stored to the entry in the meantime,
-`xa_release` will do nothing; if instead you want the entry to
-become ``NULL``, you should use `xa_erase`.
+will store a reserved entry at the indicated index.  Users of the
+normal API will see this entry as containing ``NULL``.  If you do
+not need to use the reserved entry, you can call `xa_release`
+to remove the unused entry.  If another user has stored to the entry
+in the meantime, `xa_release` will do nothing; if instead you
+want the entry to become ``NULL``, you should use `xa_erase`.
+Using `xa_insert` on a reserved entry will fail.
 
 If all entries in the array are ``NULL``, the `xa_empty` function
 will return ``true``.
@@ -181,6 +182,8 @@ Takes xa_lock internally:
  * `xa_store_bh`
  * `xa_store_irq`
  * `xa_insert`
+ * `xa_insert_bh`
+ * `xa_insert_irq`
  * `xa_erase`
  * `xa_erase_bh`
  * `xa_erase_irq`
