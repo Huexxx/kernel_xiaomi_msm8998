@@ -34,30 +34,30 @@ static atomic_long_t erofs_global_shrink_cnt;
 #define __erofs_workgroup_get(grp)	atomic_inc(&(grp)->refcount)
 #define __erofs_workgroup_put(grp)	atomic_dec(&(grp)->refcount)
 
-static int erofs_workgroup_get(struct erofs_workgroup *grp, int *ocnt)
+static int erofs_workgroup_get(struct erofs_workgroup *grp)
 {
 	int o;
 
 repeat:
 	o = erofs_wait_on_workgroup_freezed(grp);
-
 	if (unlikely(o <= 0))
 		return -1;
 
 	if (unlikely(atomic_cmpxchg(&grp->refcount, o, o + 1) != o))
 		goto repeat;
 
-	*ocnt = o;
+	/* decrease refcount paired by erofs_workgroup_put */
+	if (unlikely(o == 1))
+		atomic_long_dec(&erofs_global_shrink_cnt);
 	return 0;
 }
 
 /* radix_tree and the future XArray both don't use tagptr_t yet */
-struct erofs_workgroup *erofs_find_workgroup(
-	struct super_block *sb, pgoff_t index, bool *tag)
+struct erofs_workgroup *erofs_find_workgroup(struct super_block *sb,
+					     pgoff_t index, bool *tag)
 {
 	struct erofs_sb_info *sbi = EROFS_SB(sb);
 	struct erofs_workgroup *grp;
-	int oldcount;
 
 repeat:
 	rcu_read_lock();
@@ -67,15 +67,12 @@ repeat:
 		grp = (void *)((unsigned long)grp &
 			~RADIX_TREE_EXCEPTIONAL_ENTRY);
 
-		if (erofs_workgroup_get(grp, &oldcount)) {
+		if (erofs_workgroup_get(grp)) {
 			/* prefer to relax rcu read side */
 			rcu_read_unlock();
 			goto repeat;
 		}
 
-		/* decrease refcount added by erofs_workgroup_put */
-		if (unlikely(oldcount == 1))
-			atomic_long_dec(&erofs_global_shrink_cnt);
 		DBG_BUGON(index != grp->index);
 	}
 	rcu_read_unlock();
