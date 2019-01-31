@@ -35,6 +35,11 @@ struct bpf_map *bpf_map_meta_alloc(int inner_map_ufd)
 		return ERR_PTR(-EINVAL);
 	}
 
+	if (map_value_has_spin_lock(inner_map)) {
+		fdput(f);
+		return ERR_PTR(-ENOTSUPP);
+	}
+
 	inner_map_meta = kzalloc(sizeof(*inner_map_meta), GFP_USER);
 	if (!inner_map_meta) {
 		fdput(f);
