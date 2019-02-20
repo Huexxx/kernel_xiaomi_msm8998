@@ -213,7 +213,6 @@ Assumes xa_lock held on entry:
  * `__xa_erase`
  * `__xa_cmpxchg`
  * `__xa_alloc`
- * `__xa_reserve`
  * `__xa_set_mark`
  * `__xa_clear_mark`
 
