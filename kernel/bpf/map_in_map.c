@@ -50,6 +50,8 @@ struct bpf_map *bpf_map_meta_alloc(int inner_map_ufd)
 	inner_map_meta->key_size = inner_map->key_size;
 	inner_map_meta->value_size = inner_map->value_size;
 	inner_map_meta->map_flags = inner_map->map_flags;
+	inner_map_meta->spin_lock_off = inner_map->spin_lock_off;
+
 	inner_map_meta->ops = inner_map->ops;
 	inner_map_meta->max_entries = inner_map->max_entries;
 
