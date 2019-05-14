@@ -227,19 +227,18 @@ void *idr_get_next(struct idr *idr, int *nextid)
 {
 	struct radix_tree_iter iter;
 	void __rcu **slot;
+	void *entry = NULL;
 	unsigned long base = idr->idr_base;
 	unsigned long id = *nextid;
-	void *entry = NULL;
 
 	id = (id < base) ? 0 : id - base;
 	radix_tree_for_each_slot(slot, &idr->idr_rt, &iter, id) {
 		entry = rcu_dereference_raw(*slot);
 		if (!entry)
 			continue;
-		if (!radix_tree_deref_retry(entry))
+		if (!xa_is_internal(entry))
 			break;
-		if (slot != (void *)&idr->idr_rt.rnode &&
-				entry != (void *)RADIX_TREE_INTERNAL_NODE)
+		if (slot != &idr->idr_rt.xa_head && !xa_is_retry(entry))
 			break;
 		slot = radix_tree_iter_retry(&iter);
 	}
