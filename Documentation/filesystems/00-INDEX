@@ -67,6 +67,10 @@ fiemap.txt
 	- info on fiemap ioctl.
 files.txt
 	- info on file management in the Linux kernel.
+fscrypt.txt
+	- info on encryption filesystem.
+fsverity.txt
+	- info on verity filesystem.
 fuse.txt
 	- info on the Filesystem in User SpacE including mount options.
 gfs2-glocks.txt
