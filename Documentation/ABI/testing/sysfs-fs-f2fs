@@ -267,6 +267,13 @@ Description:	If checkpoint=disable, it displays the number of blocks that
 		If checkpoint=enable it displays the enumber of blocks that
 		would be unusable if checkpoint=disable were to be set.
 
+What:		/sys/fs/f2fs/<disk>/encoding
+Date		July 2019
+Contact:	"Daniel Rosenberg" <drosen@google.com>
+Description:
+		Displays name and version of the encoding set for the filesystem.
+                If no encoding is set, displays (none)
+
 What:		/sys/fs/f2fs/<disk>/free_segments
 Date:		September 2019
 Contact:	"Hridya Valsaraju" <hridya@google.com>
