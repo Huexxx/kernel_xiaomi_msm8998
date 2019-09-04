@@ -230,8 +230,8 @@ static int xattr_foreach(struct xattr_iter *it,
 	 *    therefore entry should be in the page
 	 */
 	entry = *(struct erofs_xattr_entry *)(it->kaddr + it->ofs);
-	if (tlimit != NULL) {
-		unsigned int entry_sz = EROFS_XATTR_ENTRY_SIZE(&entry);
+	if (tlimit) {
+		unsigned int entry_sz = erofs_xattr_entry_size(&entry);
 
 		/* xattr on-disk corruption: xattr entry beyond xattr_isize */
 		if (*tlimit < entry_sz) {
