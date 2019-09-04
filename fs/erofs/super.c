@@ -18,28 +18,28 @@ static struct kmem_cache *erofs_inode_cachep __read_mostly;
 
 static void init_once(void *ptr)
 {
-	struct erofs_vnode *vi = ptr;
+	struct erofs_inode *vi = ptr;
 
 	inode_init_once(&vi->vfs_inode);
 }
 
 static struct inode *alloc_inode(struct super_block *sb)
 {
-	struct erofs_vnode *vi =
+	struct erofs_inode *vi =
 		kmem_cache_alloc(erofs_inode_cachep, GFP_KERNEL);
 
 	if (!vi)
 		return NULL;
 
 	/* zero out everything except vfs_inode */
-	memset(vi, 0, offsetof(struct erofs_vnode, vfs_inode));
+	memset(vi, 0, offsetof(struct erofs_inode, vfs_inode));
 	return &vi->vfs_inode;
 }
 
 static void i_callback(struct rcu_head *head)
 {
 	struct inode *inode = container_of(head, struct inode, i_rcu);
-	struct erofs_vnode *vi = EROFS_V(inode);
+	struct erofs_inode *vi = EROFS_I(inode);
 
 	/* be careful RCU symlink path (see ext4_inode_info->i_data)! */
 	if (is_inode_fast_symlink(inode))
@@ -523,7 +523,7 @@ static int __init erofs_module_init(void)
 	infoln("initializing erofs " EROFS_VERSION);
 
 	erofs_inode_cachep = kmem_cache_create("erofs_inode",
-					       sizeof(struct erofs_vnode), 0,
+					       sizeof(struct erofs_inode), 0,
 					       SLAB_RECLAIM_ACCOUNT,
 					       init_once);
 	if (!erofs_inode_cachep) {
