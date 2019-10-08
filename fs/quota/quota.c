@@ -59,8 +59,6 @@ static int quota_sync_all(int type)
 {
 	int ret;
 
-	if (type >= MAXQUOTAS)
-		return -EINVAL;
 	ret = security_quotactl(Q_SYNC, type, 0, NULL);
 	if (!ret)
 		iterate_supers(quota_sync_one, &type);
@@ -685,8 +683,6 @@ static int do_quotactl(struct super_block *sb, int type, int cmd, qid_t id,
 {
 	int ret;
 
-	if (type >= MAXQUOTAS)
-		return -EINVAL;
 	type = array_index_nospec(type, MAXQUOTAS);
 	/*
 	 * Quota not supported on this fs? Check this before s_quota_types
@@ -829,6 +825,9 @@ SYSCALL_DEFINE4(quotactl, unsigned int, cmd, const char __user *, special,
 
 	cmds = cmd >> SUBCMDSHIFT;
 	type = cmd & SUBCMDMASK;
+
+	if (type >= MAXQUOTAS)
+		return -EINVAL;
 
 	/*
 	 * As a special case Q_SYNC can be called without a specific device.
