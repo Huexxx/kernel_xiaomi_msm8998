@@ -176,9 +176,9 @@ static inline void set_inode_attr(struct inode *inode, struct iattr *iattr)
 	struct super_block *sb = inode->i_sb;
 	inode->i_uid = iattr->ia_uid;
 	inode->i_gid = iattr->ia_gid;
-	inode->i_atime = timespec_trunc(iattr->ia_atime, sb->s_time_gran);
-	inode->i_mtime = timespec_trunc(iattr->ia_mtime, sb->s_time_gran);
-	inode->i_ctime = timespec_trunc(iattr->ia_ctime, sb->s_time_gran);
+	inode->i_atime = iattr->ia_atime, sb->s_time_gran;
+	inode->i_mtime = iattr->ia_mtime, sb->s_time_gran;
+	inode->i_ctime = iattr->ia_ctime, sb->s_time_gran;
 }
 
 static void kernfs_refresh_inode(struct kernfs_node *kn, struct inode *inode)
