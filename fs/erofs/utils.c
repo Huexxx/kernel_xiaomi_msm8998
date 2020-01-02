@@ -58,9 +58,8 @@ repeat:
 	return 0;
 }
 
-/* radix_tree and the future XArray both don't use tagptr_t yet */
 struct erofs_workgroup *erofs_find_workgroup(struct super_block *sb,
-					     pgoff_t index, bool *tag)
+					     pgoff_t index)
 {
 	struct erofs_sb_info *sbi = EROFS_SB(sb);
 	struct erofs_workgroup *grp;
@@ -68,8 +67,7 @@ struct erofs_workgroup *erofs_find_workgroup(struct super_block *sb,
 repeat:
 	rcu_read_lock();
 	grp = radix_tree_lookup(&sbi->workstn_tree, index);
-	if (grp != NULL) {
-		*tag = radix_tree_exceptional_entry(grp);
+	if (grp) {
 		grp = (void *)((unsigned long)grp &
 			~RADIX_TREE_EXCEPTIONAL_ENTRY);
 
