@@ -84,8 +84,7 @@ repeat:
 }
 
 int erofs_register_workgroup(struct super_block *sb,
-			     struct erofs_workgroup *grp,
-			     bool tag)
+			     struct erofs_workgroup *grp)
 {
 	struct erofs_sb_info *sbi;
 	int err;
@@ -102,10 +101,6 @@ int erofs_register_workgroup(struct super_block *sb,
 
 	sbi = EROFS_SB(sb);
 	xa_lock(&sbi->workstn_tree);
-
-	if (tag)
-		grp = (void *)((unsigned long)grp |
-			1UL << RADIX_TREE_EXCEPTIONAL_SHIFT);
 
 	/*
 	 * Bump up reference count before making this workgroup
