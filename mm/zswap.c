@@ -1422,7 +1422,8 @@ static int __init init_zswap(void)
 	return 0;
 
 fallback_fail:
-	zswap_pool_destroy(pool);
+	if (pool)
+		zswap_pool_destroy(pool);
 dstmem_fail:
 	zswap_entry_cache_destroy();
 cache_fail:
