@@ -1707,7 +1707,7 @@ int sockmap_get_from_fd(const union bpf_attr *attr, int type,
 
 static void *sock_map_lookup(struct bpf_map *map, void *key)
 {
-	return ERR_PTR(-EOPNOTSUPP);
+	return __sock_map_lookup_elem(map, *(u32 *)key);
 }
 
 static int sock_map_update_elem(struct bpf_map *map,
@@ -2155,7 +2155,7 @@ const struct bpf_map_ops sock_map_ops = {
 const struct bpf_map_ops sock_hash_ops = {
 	.map_alloc = sock_hash_alloc,
 	.map_free = sock_hash_free,
-	.map_lookup_elem = sock_map_lookup,
+	.map_lookup_elem = sock_hash_lookup,
 	.map_get_next_key = sock_hash_get_next_key,
 	.map_update_elem = sock_hash_update_elem,
 	.map_delete_elem = sock_hash_delete_elem,
@@ -2180,6 +2180,11 @@ const struct bpf_func_proto bpf_sock_map_update_proto = {
 	.arg3_type	= ARG_PTR_TO_MAP_KEY,
 	.arg4_type	= ARG_ANYTHING,
 };
+
+static void *sock_hash_lookup(struct bpf_map *map, void *key)
+{
+	return __sock_hash_lookup_elem(map, key);
+}
 
 BPF_CALL_4(bpf_sock_hash_update, struct bpf_sock_ops_kern *, bpf_sock,
 	   struct bpf_map *, map, void *, key, u64, flags)
