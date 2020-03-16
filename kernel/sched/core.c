@@ -3708,6 +3708,8 @@ static void __sched notrace __schedule(bool preempt)
 
 		set_task_last_switch_out(prev, wallclock);
 
+		psi_sched_switch(prev, next, !task_on_rq_queued(prev));
+
 		trace_sched_switch(preempt, prev, next);
 		rq = context_switch(rq, prev, next, &rf); /* unlocks the rq */
 		cpu = cpu_of(rq);
