@@ -1707,7 +1707,14 @@ int sockmap_get_from_fd(const union bpf_attr *attr, int type,
 
 static void *sock_map_lookup(struct bpf_map *map, void *key)
 {
-	return __sock_map_lookup_elem(map, *(u32 *)key);
+	struct sock *sk;
+
+	sk = __sock_map_lookup_elem(map, *(u32 *)key);
+	if (!sk || !sk_fullsock(sk))
+		return NULL;
+	if (sk_is_refcounted(sk) && !refcount_inc_not_zero(&sk->sk_refcnt))
+		return NULL;
+	return sk;
 }
 
 static int sock_map_update_elem(struct bpf_map *map,
@@ -2183,7 +2190,14 @@ const struct bpf_func_proto bpf_sock_map_update_proto = {
 
 static void *sock_hash_lookup(struct bpf_map *map, void *key)
 {
-	return __sock_hash_lookup_elem(map, key);
+	struct sock *sk;
+
+	sk = __sock_hash_lookup_elem(map, key);
+	if (!sk || !sk_fullsock(sk))
+		return NULL;
+	if (sk_is_refcounted(sk) && !refcount_inc_not_zero(&sk->sk_refcnt))
+		return NULL;
+	return sk;
 }
 
 BPF_CALL_4(bpf_sock_hash_update, struct bpf_sock_ops_kern *, bpf_sock,
