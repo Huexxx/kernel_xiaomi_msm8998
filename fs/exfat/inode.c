@@ -349,18 +349,18 @@ static int exfat_readpage(struct file *file, struct page *page)
 }
 #endif
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 8, 0)
+//#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 8, 0)
 static void exfat_readahead(struct readahead_control *rac)
 {
 	mpage_readahead(rac, exfat_get_block);
 }
-#else
+/*#else
 static int exfat_readpages(struct file *file, struct address_space *mapping,
 		struct list_head *pages, unsigned int nr_pages)
 {
 	return mpage_readpages(mapping, pages, nr_pages, exfat_get_block);
 }
-#endif
+#endif*/
 
 static int exfat_writepage(struct page *page, struct writeback_control *wbc)
 {
@@ -528,11 +528,11 @@ static const struct address_space_operations exfat_aops = {
 #else
 	.readpage	= exfat_readpage,
 #endif
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 8, 0)
+//#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 8, 0)
 	.readahead	= exfat_readahead,
-#else
+/*#else
 	.readpages	= exfat_readpages,
-#endif
+#endif*/
 	.writepage	= exfat_writepage,
 	.writepages	= exfat_writepages,
 	.write_begin	= exfat_write_begin,
