@@ -847,125 +847,41 @@ static void fuse_send_readpages(struct fuse_req *req, struct file *file)
 	}
 }
 
-struct fuse_fill_data {
-	struct fuse_req *req;
-	struct file *file;
-	struct inode *inode;
-	unsigned nr_pages;
-};
-
-static int fuse_readpages_fill(struct file *_data, struct page *page)
+static void fuse_readahead(struct readahead_control *rac)
 {
-	struct fuse_fill_data *data = (struct fuse_fill_data *)_data;
-	struct fuse_req *req = data->req;
-	struct inode *inode = data->inode;
+	struct inode *inode = rac->mapping->host;
 	struct fuse_conn *fc = get_fuse_conn(inode);
+	unsigned int i, max_pages, nr_pages = 0;
 
-	fuse_wait_on_page_writeback(inode, page->index);
-
-	if (req->num_pages &&
-	    (req->num_pages == FUSE_MAX_PAGES_PER_REQ ||
-	     (req->num_pages + 1) * PAGE_SIZE > fc->max_read ||
-	     req->pages[req->num_pages - 1]->index + 1 != page->index)) {
-		int nr_alloc = min_t(unsigned, data->nr_pages,
-				     FUSE_MAX_PAGES_PER_REQ);
-		fuse_send_readpages(req, data->file);
-		if (fc->async_read)
-			req = fuse_get_req_for_background(fc, nr_alloc);
-		else
-			req = fuse_get_req(fc, nr_alloc);
-
-		data->req = req;
-		if (IS_ERR(req)) {
-			unlock_page(page);
-			return PTR_ERR(req);
-		}
-	}
-
-	if (WARN_ON(req->num_pages >= req->max_pages)) {
-		unlock_page(page);
-		fuse_put_request(fc, req);
-		return -EIO;
-	}
-
-#ifdef CONFIG_CMA
-	if (is_cma_pageblock(page)) {
-		struct page *oldpage = page, *newpage;
-		int err;
-
-		/* make sure that old page is not free in-between the calls */
-		get_page(oldpage);
-
-		newpage = alloc_page(GFP_HIGHUSER);
-		if (!newpage) {
-			put_page(oldpage);
-			return -ENOMEM;
-		}
-
-		err = replace_page_cache_page(oldpage, newpage, GFP_KERNEL);
-		if (err) {
-			__free_page(newpage);
-			put_page(oldpage);
-			return err;
-		}
-
-		/*
-		 * Decrement the count on new page to make page cache the only
-		 * owner of it
-		 */
-		lock_page(newpage);
-		put_page(newpage);
-
-		lru_cache_add_file(newpage);
-
-		/* finally release the old page and swap pointers */
-		unlock_page(oldpage);
-		put_page(oldpage);
-		page = newpage;
-	}
-#endif
-
-	get_page(page);
-	req->pages[req->num_pages] = page;
-	req->page_descs[req->num_pages].length = PAGE_SIZE;
-	req->num_pages++;
-	data->nr_pages--;
-	return 0;
-}
-
-static int fuse_readpages(struct file *file, struct address_space *mapping,
-			  struct list_head *pages, unsigned nr_pages)
-{
-	struct inode *inode = mapping->host;
-	struct fuse_conn *fc = get_fuse_conn(inode);
-	struct fuse_fill_data data;
-	int err;
-	int nr_alloc = min_t(unsigned, nr_pages, FUSE_MAX_PAGES_PER_REQ);
-
-	err = -EIO;
 	if (fuse_is_bad(inode))
-		goto out;
+		return;
 
-	data.file = file;
-	data.inode = inode;
-	if (fc->async_read)
-		data.req = fuse_get_req_for_background(fc, nr_alloc);
-	else
-		data.req = fuse_get_req(fc, nr_alloc);
-	data.nr_pages = nr_pages;
-	err = PTR_ERR(data.req);
-	if (IS_ERR(data.req))
-		goto out;
+	max_pages = min_t(unsigned int, FUSE_MAX_PAGES_PER_REQ,
+			fc->max_read / PAGE_SIZE);
 
-	err = read_cache_pages(mapping, pages, fuse_readpages_fill, &data);
-	if (!err) {
-		if (data.req->num_pages)
-			fuse_send_readpages(data.req, file);
+	for (;;) {
+		struct fuse_req *req;
+
+		nr_pages = readahead_count(rac) - nr_pages;
+		if (nr_pages > max_pages)
+			nr_pages = max_pages;
+		if (nr_pages == 0)
+			break;
+		if (fc->async_read)
+			req = fuse_get_req_for_background(fc, nr_pages);
 		else
-			fuse_put_request(fc, data.req);
+			req = fuse_get_req(fc, nr_pages);
+		if (IS_ERR(req))
+			return;
+		nr_pages = __readahead_batch(rac, req->pages, nr_pages);
+		for (i = 0; i < nr_pages; i++) {
+			fuse_wait_on_page_writeback(inode,
+						    readahead_index(rac) + i);
+			req->page_descs[i].length = PAGE_SIZE;
+		}
+		req->num_pages = nr_pages;
+		fuse_send_readpages(req, rac->file);
 	}
-out:
-	return err;
 }
 
 static ssize_t fuse_file_read_iter(struct kiocb *iocb, struct iov_iter *to)
@@ -3140,10 +3056,10 @@ static const struct file_operations fuse_direct_io_file_operations = {
 
 static const struct address_space_operations fuse_file_aops  = {
 	.readpage	= fuse_readpage,
+	.readahead	= fuse_readahead,
 	.writepage	= fuse_writepage,
 	.writepages	= fuse_writepages,
 	.launder_page	= fuse_launder_page,
-	.readpages	= fuse_readpages,
 	.set_page_dirty	= __set_page_dirty_nobuffers,
 	.bmap		= fuse_bmap,
 	.direct_IO	= fuse_direct_IO,
