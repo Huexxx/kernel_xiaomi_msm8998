@@ -456,7 +456,7 @@ static inline void __rcu **__radix_tree_next_slot(void __rcu **slot,
  * radix_tree_next_slot - find next slot in chunk
  *
  * @slot:	pointer to current slot
- * @iter:	pointer to interator state
+ * @iter:	pointer to iterator state
  * @flags:	RADIX_TREE_ITER_*, should be constant
  * Returns:	pointer to next slot, or NULL if there no more left
  *
