@@ -1846,6 +1846,7 @@ static void do_sync_mmap_readahead(struct vm_area_struct *vma,
 				   pgoff_t offset)
 {
 	struct address_space *mapping = file->f_mapping;
+	DEFINE_READAHEAD(ractl, file, mapping, offset);
 
 	/* If we don't want any read-ahead, don't bother */
 	if (vma->vm_flags & VM_RAND_READ)
@@ -1854,8 +1855,7 @@ static void do_sync_mmap_readahead(struct vm_area_struct *vma,
 		return;
 
 	if (vma->vm_flags & VM_SEQ_READ) {
-		page_cache_sync_readahead(mapping, ra, file, offset,
-					  ra->ra_pages);
+		page_cache_sync_ra(&ractl, ra, ra->ra_pages);
 		return;
 	}
 
@@ -1876,7 +1876,8 @@ static void do_sync_mmap_readahead(struct vm_area_struct *vma,
 	ra->start = max_t(long, 0, offset - ra->ra_pages / 2);
 	ra->size = ra->ra_pages;
 	ra->async_size = ra->ra_pages / 4;
-	ra_submit(ra, mapping, file);
+	ractl._index = ra->start;
+	do_page_cache_ra(&ractl, ra->size, ra->async_size);
 }
 
 /*
