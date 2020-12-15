@@ -461,7 +461,7 @@ static int __zswap_cpu_comp_notifier(struct zswap_pool *pool,
 		if (WARN_ON(*per_cpu_ptr(pool->tfm, cpu)))
 			break;
 		tfm = crypto_alloc_comp(pool->tfm_name, 0, 0);
-		if (IS_ERR_OR_NULL(tfm)) {
+		if (IS_ERR(tfm)) {
 			pr_err("could not alloc crypto comp %s : %ld\n",
 			       pool->tfm_name, PTR_ERR(tfm));
 			return NOTIFY_BAD;
@@ -471,7 +471,7 @@ static int __zswap_cpu_comp_notifier(struct zswap_pool *pool,
 	case CPU_DEAD:
 	case CPU_UP_CANCELED:
 		tfm = *per_cpu_ptr(pool->tfm, cpu);
-		if (!IS_ERR_OR_NULL(tfm))
+		if (!IS_ERR(tfm))
 			crypto_free_comp(tfm);
 		*per_cpu_ptr(pool->tfm, cpu) = NULL;
 		break;
