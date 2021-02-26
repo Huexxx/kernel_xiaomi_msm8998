@@ -2271,7 +2271,7 @@ static unsigned long zs_can_compact(struct size_class *class)
 }
 
 static unsigned long __zs_compact(struct zs_pool *pool,
-				   struct size_class *class)
+				  struct size_class *class)
 {
 	struct zs_compact_control cc;
 	struct zspage *src_zspage;
