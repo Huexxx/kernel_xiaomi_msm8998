@@ -245,3 +245,4 @@ char *next_arg(char *args, char **param, char **val)
 	return skip_spaces(args);
 	//return next;
 }
+EXPORT_SYMBOL(next_arg);
