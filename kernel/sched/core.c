@@ -3322,7 +3322,6 @@ void scheduler_tick(void)
 
 	cpufreq_update_util(rq, 0);
 	early_notif = early_detection_notify(rq, wallclock);
-	psi_task_tick(rq);
 	raw_spin_unlock(&rq->lock);
 
 	if (early_notif)
