@@ -1846,7 +1846,7 @@ static void do_sync_mmap_readahead(struct vm_area_struct *vma,
 				   pgoff_t offset)
 {
 	struct address_space *mapping = file->f_mapping;
-	DEFINE_READAHEAD(ractl, file, mapping, offset);
+	DEFINE_READAHEAD(ractl, file, ra, mapping, offset);
 
 	/* If we don't want any read-ahead, don't bother */
 	if (vma->vm_flags & VM_RAND_READ)
@@ -1855,7 +1855,7 @@ static void do_sync_mmap_readahead(struct vm_area_struct *vma,
 		return;
 
 	if (vma->vm_flags & VM_SEQ_READ) {
-		page_cache_sync_ra(&ractl, ra, ra->ra_pages);
+		page_cache_sync_ra(&ractl, ra->ra_pages);
 		return;
 	}
 
