@@ -6073,7 +6073,7 @@ void cgroup_post_fork(struct task_struct *child)
 
 	/* Cgroup has to be killed so take down child immediately. */
 	if (unlikely(kill))
-		do_send_sig_info(SIGKILL, SEND_SIG_NOINFO, child, PIDTYPE_TGID);
+		do_send_sig_info(SIGKILL, SEND_SIG_NOINFO, child, true);
 }
 
 /**
