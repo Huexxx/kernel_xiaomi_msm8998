@@ -69,6 +69,9 @@ enum {
 
 	/* Cgroup is frozen. */
 	CGRP_FROZEN,
+
+	/* Control group has to be killed. */
+	CGRP_KILL,
 };
 
 /* cgroup_root->flags */
