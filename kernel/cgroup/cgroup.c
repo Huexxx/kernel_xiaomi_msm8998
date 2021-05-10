@@ -6117,7 +6117,8 @@ void cgroup_exit(struct task_struct *tsk)
 
 		if (unlikely(cgroup_task_frozen(tsk)))
 			cgroup_freezer_frozen_exit(tsk);
-		else if (unlikely(cgroup_task_freeze(tsk)))
+		else if (unlikely(!(tsk->flags & PF_KTHREAD) &&
+				  test_bit(CGRP_FREEZE, &task_dfl_cgroup(tsk)->flags)))
 			cgroup_update_frozen(task_dfl_cgroup(tsk));
 	} else {
 		get_css_set(cset);
