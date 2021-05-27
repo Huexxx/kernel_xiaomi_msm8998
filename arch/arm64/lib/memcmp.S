@@ -1,18 +1,35 @@
-/* memcmp - compare memory
+/*
+ * Copyright (c) 2013-2021, Arm Limited.
  *
- * Copyright (c) 2013, Arm Limited.
- * SPDX-License-Identifier: MIT
+ * This code is based on glibc cortex strings work originally authored by Linaro
+ * and re-licensed under GPLv2 for the Linux kernel. The original code can
+ * be found @
+ *
+ * Adapted from the original at:
+ * https://github.com/ARM-software/optimized-routines/blob/e823e3abf5f89ecb/string/aarch64/memcmp.S
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
+#include <linux/linkage.h>
+#include <asm/assembler.h>
 
 /* Assumptions:
  *
  * ARMv8-a, AArch64, unaligned accesses.
  */
 
-#include <linux/linkage.h>
-#include <asm/assembler.h>
-
-#define L(l) .L ## l
+#define L(label) .L ## label
 
 /* Parameters and result.  */
 #define src1		x0
@@ -93,7 +110,7 @@ L(last_bytes):
 	add	src2, src2, limit
 	ldp	data1, data1h, [src1]
 	ldp	data2, data2h, [src2]
-	cmp     data1, data2
+	cmp	data1, data2
 	bne	L(return)
 	mov	data1, data1h
 	mov	data2, data2h
@@ -101,9 +118,11 @@ L(last_bytes):
 
 	/* Compare data bytes and set return value to 0, -1 or 1.  */
 L(return):
-CPU_LE(	rev	data1, data1 )
-CPU_LE(	rev	data2, data2 )
-	cmp     data1, data2
+#ifndef __AARCH64EB__
+	rev	data1, data1
+	rev	data2, data2
+#endif
+	cmp	data1, data2
 L(ret_eq):
 	cset	result, ne
 	cneg	result, result, lo
