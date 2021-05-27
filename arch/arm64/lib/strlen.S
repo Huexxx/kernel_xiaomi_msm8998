@@ -1,23 +1,32 @@
 /*
- * strlen - calculate the length of a string
+ * Copyright (c) 2013-2021, Arm Limited.
  *
- * Copyright (c) 2013, Arm Limited.
- * SPDX-License-Identifier: MIT
- */
-
-/* Assumptions:
+ * Adapted from the original at:
+ * https://github.com/ARM-software/optimized-routines/blob/98e4d6a5c13c8e54/string/aarch64/strlen.S
  *
- * ARMv8-a, AArch64, unaligned accesses, min page size 4k.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <linux/linkage.h>
 #include <asm/assembler.h>
 
-#define L(l) .L ## l
+/*
+ * Assumptions:
+ *
+ * ARMv8-a, AArch64, unaligned accesses, min page size 4k.
+ */
 
-/* To test the page crossing code path more thoroughly, compile with
-   -DTEST_PAGE_CROSS - this will force all calls through the slower
-   entry path.  This option is not intended for production use.	 */
+#define L(label) .L ## label
 
 /* Arguments and results.  */
 #define srcin		x0
@@ -45,26 +54,23 @@
 #define REP8_7f 0x7f7f7f7f7f7f7f7f
 #define REP8_80 0x8080808080808080
 
-# define MIN_PAGE_SIZE 4096
+#define MIN_PAGE_SIZE 4096
 
 	/* Since strings are short on average, we check the first 16 bytes
 	   of the string for a NUL character.  In order to do an unaligned ldp
 	   safely we have to do a page cross check first.  If there is a NUL
 	   byte we calculate the length from the 2 8-byte words using
 	   conditional select to reduce branch mispredictions (it is unlikely
-	   __strlen_aarch64 will be repeatedly called on strings with the same length).
-
+	   strlen will be repeatedly called on strings with the same length).
 	   If the string is longer than 16 bytes, we align src so don't need
 	   further page cross checks, and process 32 bytes per iteration
 	   using the fast NUL check.  If we encounter non-ASCII characters,
 	   fallback to a second loop using the full NUL check.
-
 	   If the page cross check fails, we read 16 bytes from an aligned
 	   address, remove any characters before the string, and continue
 	   in the main loop using aligned loads.  Since strings crossing a
 	   page in the first 16 bytes are rare (probability of
 	   16/MIN_PAGE_SIZE ~= 0.4%), this case does not need to be optimized.
-
 	   AArch64 systems have a minimum page size of 4k.  We don't bother
 	   checking for larger page sizes - the cost of setting up the correct
 	   page size is just not worth the extra gain from a small reduction in
@@ -78,14 +84,14 @@ ENTRY(strlen)
 	cmp	tmp1, MIN_PAGE_SIZE - 16
 	b.gt	L(page_cross)
 	ldp	data1, data2, [srcin]
-
+#ifdef __AARCH64EB__
 	/* For big-endian, carry propagation (if the final byte in the
 	   string is 0x01) means we cannot use has_nul1/2 directly.
 	   Since we expect strings to be small and early-exit,
 	   byte-swap the data now so has_null1/2 will be correct.  */
-CPU_BE(	rev	data1, data1 )
-CPU_BE(	rev	data2, data2 )
-
+	rev	data1, data1
+	rev	data2, data2
+#endif
 	sub	tmp1, data1, zeroones
 	orr	tmp2, data1, REP8_7f
 	sub	tmp3, data2, zeroones
@@ -137,18 +143,19 @@ L(page_cross_entry):
 
 	/* Enter with C = has_nul1 == 0.  */
 L(tail):
+#ifdef __AARCH64EB__
 	/* For big-endian, carry propagation (if the final byte in the
 	   string is 0x01) means we cannot use has_nul1/2 directly.  The
 	   easiest way to get the correct byte is to byte-swap the data
 	   and calculate the syndrome a second time.  */
-CPU_BE(	csel	data1, data1, data2, cc )
-CPU_BE(	rev	data1, data1 )
-CPU_BE(	sub	tmp1, data1, zeroones )
-CPU_BE(	orr	tmp2, data1, REP8_7f )
-CPU_BE(	bic	has_nul1, tmp1, tmp2 )
-
-CPU_LE(	csel	has_nul1, has_nul1, has_nul2, cc )
-
+	csel	data1, data1, data2, cc
+	rev	data1, data1
+	sub	tmp1, data1, zeroones
+	orr	tmp2, data1, REP8_7f
+	bic	has_nul1, tmp1, tmp2
+#else
+	csel	has_nul1, has_nul1, has_nul2, cc
+#endif
 	sub	len, src, srcin
 	rev	has_nul1, has_nul1
 	add	tmp2, len, 8
@@ -186,10 +193,13 @@ L(page_cross):
 	ldp	data1, data2, [src]
 	lsl	tmp1, srcin, 3
 	mov	tmp4, -1
+#ifdef __AARCH64EB__
 	/* Big-endian.	Early bytes are at MSB.	 */
-CPU_BE(	lsr	tmp1, tmp4, tmp1 )	/* Shift (tmp1 & 63).  */
+	lsr	tmp1, tmp4, tmp1	/* Shift (tmp1 & 63).  */
+#else
 	/* Little-endian.  Early bytes are at LSB.  */
-CPU_LE(	lsl	tmp1, tmp4, tmp1 )	/* Shift (tmp1 & 63).  */
+	lsl	tmp1, tmp4, tmp1	/* Shift (tmp1 & 63).  */
+#endif
 	orr	tmp1, tmp1, REP8_80
 	orn	data1, data1, tmp1
 	orn	tmp2, data2, tmp1
