@@ -675,6 +675,7 @@ config ZPOOL
 
 config ZBUD
 	tristate "Low (Up to 2x) density storage for compressed pages"
+	depends on ZPOOL
 	default n
 	help
 	  A special purpose allocator for storing compressed pages.
