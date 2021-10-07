@@ -353,11 +353,11 @@ static int erofs_build_cache_strategy(struct super_block *sb,
 	}
 
 	if (!strcmp(cs, "disabled")) {
-		sbi->cache_strategy = EROFS_ZIP_CACHE_DISABLED;
+		sbi->opt.cache_strategy = EROFS_ZIP_CACHE_DISABLED;
 	} else if (!strcmp(cs, "readahead")) {
-		sbi->cache_strategy = EROFS_ZIP_CACHE_READAHEAD;
+		sbi->opt.cache_strategy = EROFS_ZIP_CACHE_READAHEAD;
 	} else if (!strcmp(cs, "readaround")) {
-		sbi->cache_strategy = EROFS_ZIP_CACHE_READAROUND;
+		sbi->opt.cache_strategy = EROFS_ZIP_CACHE_READAROUND;
 	} else {
 		erofs_err(sb, "Unrecognized cache strategy \"%s\"", cs);
 		err = -EINVAL;
@@ -378,15 +378,15 @@ static int erofs_build_cache_strategy(struct super_block *sb,
 static void erofs_default_options(struct erofs_sb_info *sbi)
 {
 #ifdef CONFIG_EROFS_FS_ZIP
-	sbi->cache_strategy = EROFS_ZIP_CACHE_READAROUND;
-	sbi->max_sync_decompress_pages = 3;
-	sbi->readahead_sync_decompress = false;
+	sbi->opt.cache_strategy = EROFS_ZIP_CACHE_READAROUND;
+	sbi->opt.max_sync_decompress_pages = 3;
+	sbi->opt.readahead_sync_decompress = false;
 #endif
 #ifdef CONFIG_EROFS_FS_XATTR
-	set_opt(sbi, XATTR_USER);
+	set_opt(&sbi->opt, XATTR_USER);
 #endif
 #ifdef CONFIG_EROFS_FS_POSIX_ACL
-	set_opt(sbi, POSIX_ACL);
+	set_opt(&sbi->opt, POSIX_ACL);
 #endif
 }
 
@@ -429,10 +429,10 @@ static int erofs_parse_options(struct super_block *sb, char *options)
 		switch (token) {
 #ifdef CONFIG_EROFS_FS_XATTR
 		case Opt_user_xattr:
-			set_opt(EROFS_SB(sb), XATTR_USER);
+			set_opt(&EROFS_SB(sb)->opt, XATTR_USER);
 			break;
 		case Opt_nouser_xattr:
-			clear_opt(EROFS_SB(sb), XATTR_USER);
+			clear_opt(&EROFS_SB(sb)->opt, XATTR_USER);
 			break;
 #else
 		case Opt_user_xattr:
@@ -444,10 +444,10 @@ static int erofs_parse_options(struct super_block *sb, char *options)
 #endif
 #ifdef CONFIG_EROFS_FS_POSIX_ACL
 		case Opt_acl:
-			set_opt(EROFS_SB(sb), POSIX_ACL);
+			set_opt(&EROFS_SB(sb)->opt, POSIX_ACL);
 			break;
 		case Opt_noacl:
-			clear_opt(EROFS_SB(sb), POSIX_ACL);
+			clear_opt(&EROFS_SB(sb)->opt, POSIX_ACL);
 			break;
 #else
 		case Opt_acl:
@@ -565,7 +565,7 @@ static int erofs_fill_super(struct super_block *sb, void *data, int silent)
 	if (err)
 		return err;
 
-	if (test_opt(sbi, POSIX_ACL))
+	if (test_opt(&sbi->opt, POSIX_ACL))
 		sb->s_flags |= SB_POSIXACL;
 	else
 		sb->s_flags &= ~SB_POSIXACL;
@@ -728,23 +728,23 @@ static int erofs_show_options(struct seq_file *seq, struct dentry *root)
 	struct erofs_sb_info *sbi __maybe_unused = EROFS_SB(root->d_sb);
 
 #ifdef CONFIG_EROFS_FS_XATTR
-	if (test_opt(sbi, XATTR_USER))
+	if (test_opt(&sbi->opt, XATTR_USER))
 		seq_puts(seq, ",user_xattr");
 	else
 		seq_puts(seq, ",nouser_xattr");
 #endif
 #ifdef CONFIG_EROFS_FS_POSIX_ACL
-	if (test_opt(sbi, POSIX_ACL))
+	if (test_opt(&sbi->opt, POSIX_ACL))
 		seq_puts(seq, ",acl");
 	else
 		seq_puts(seq, ",noacl");
 #endif
 #ifdef CONFIG_EROFS_FS_ZIP
-	if (sbi->cache_strategy == EROFS_ZIP_CACHE_DISABLED) {
+	if (sbi->opt.cache_strategy == EROFS_ZIP_CACHE_DISABLED) {
 		seq_puts(seq, ",cache_strategy=disabled");
-	} else if (sbi->cache_strategy == EROFS_ZIP_CACHE_READAHEAD) {
+	} else if (sbi->opt.cache_strategy == EROFS_ZIP_CACHE_READAHEAD) {
 		seq_puts(seq, ",cache_strategy=readahead");
-	} else if (sbi->cache_strategy == EROFS_ZIP_CACHE_READAROUND) {
+	} else if (sbi->opt.cache_strategy == EROFS_ZIP_CACHE_READAROUND) {
 		seq_puts(seq, ",cache_strategy=readaround");
 	}
 #endif
@@ -754,7 +754,7 @@ static int erofs_show_options(struct seq_file *seq, struct dentry *root)
 static int erofs_remount(struct super_block *sb, int *flags, char *data)
 {
 	struct erofs_sb_info *sbi = EROFS_SB(sb);
-	unsigned int org_mnt_opt = sbi->mount_opt;
+	unsigned int org_mnt_opt = sbi->opt.mount_opt;
 	int err;
 
 	DBG_BUGON(!sb_rdonly(sb));
@@ -762,7 +762,7 @@ static int erofs_remount(struct super_block *sb, int *flags, char *data)
 	if (err)
 		goto out;
 
-	if (test_opt(sbi, POSIX_ACL))
+	if (test_opt(&sbi->opt, POSIX_ACL))
 		sb->s_flags |= SB_POSIXACL;
 	else
 		sb->s_flags &= ~SB_POSIXACL;
@@ -770,7 +770,7 @@ static int erofs_remount(struct super_block *sb, int *flags, char *data)
 	*flags |= MS_RDONLY;
 	return 0;
 out:
-	sbi->mount_opt = org_mnt_opt;
+	sbi->opt.mount_opt = org_mnt_opt;
 	return err;
 }
 
