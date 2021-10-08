@@ -21,7 +21,7 @@
 #define show_mflags(flags) __print_flags(flags, "",	\
 	{ EROFS_MAP_MAPPED,	"M" },			\
 	{ EROFS_MAP_META,	"I" },			\
-	{ EROFS_MAP_ZIPPED,	"Z" })
+	{ EROFS_MAP_ENCODED,	"E" })
 
 TRACE_EVENT(erofs_lookup,
 
