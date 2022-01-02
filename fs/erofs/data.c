@@ -45,6 +45,57 @@ struct page *erofs_get_meta_page(struct super_block *sb, erofs_blk_t blkaddr)
 	return page;
 }
 
+void erofs_unmap_metabuf(struct erofs_buf *buf)
+{
+	if (buf->kmap_type == EROFS_KMAP)
+		kunmap(buf->page);
+	else if (buf->kmap_type == EROFS_KMAP_ATOMIC)
+		kunmap_atomic(buf->base);
+	buf->base = NULL;
+	buf->kmap_type = EROFS_NO_KMAP;
+}
+
+void erofs_put_metabuf(struct erofs_buf *buf)
+{
+	if (!buf->page)
+		return;
+	erofs_unmap_metabuf(buf);
+	put_page(buf->page);
+	buf->page = NULL;
+}
+
+void *erofs_read_metabuf(struct erofs_buf *buf, struct super_block *sb,
+			erofs_blk_t blkaddr, enum erofs_kmap_type type)
+{
+	struct address_space *const mapping = sb->s_bdev->bd_inode->i_mapping;
+	erofs_off_t offset = blknr_to_addr(blkaddr);
+	pgoff_t index = offset >> PAGE_SHIFT;
+	struct page *page = buf->page;
+
+	if (!page || page->index != index) {
+		erofs_put_metabuf(buf);
+		page = read_cache_page_gfp(mapping, index,
+				mapping_gfp_constraint(mapping, ~__GFP_FS));
+		if (IS_ERR(page))
+			return page;
+		/* should already be PageUptodate, no need to lock page */
+		buf->page = page;
+	}
+	if (buf->kmap_type == EROFS_NO_KMAP) {
+		if (type == EROFS_KMAP)
+			buf->base = kmap(page);
+		else if (type == EROFS_KMAP_ATOMIC)
+			buf->base = kmap_atomic(page);
+		buf->kmap_type = type;
+	} else if (buf->kmap_type != type) {
+		DBG_BUGON(1);
+		return ERR_PTR(-EFAULT);
+	}
+	if (type == EROFS_NO_KMAP)
+		return NULL;
+	return buf->base + (offset & ~PAGE_MASK);
+}
+
 static int erofs_map_blocks_flatmode(struct inode *inode,
 				     struct erofs_map_blocks *map,
 				     int flags)
@@ -54,7 +105,7 @@ static int erofs_map_blocks_flatmode(struct inode *inode,
 	struct erofs_inode *vi = EROFS_I(inode);
 	bool tailendpacking = (vi->datalayout == EROFS_INODE_FLAT_INLINE);
 
-	nblocks = DIV_ROUND_UP(inode->i_size, PAGE_SIZE);
+	nblocks = DIV_ROUND_UP(inode->i_size, EROFS_BLKSIZ);
 	lastblk = nblocks - tailendpacking;
 
 	/* there is no hole in flatmode */
@@ -95,10 +146,11 @@ static int erofs_map_blocks(struct inode *inode,
 	struct super_block *sb = inode->i_sb;
 	struct erofs_inode *vi = EROFS_I(inode);
 	struct erofs_inode_chunk_index *idx;
-	struct page *page;
+	struct erofs_buf buf = __EROFS_BUF_INITIALIZER;
 	u64 chunknr;
 	unsigned int unit;
 	erofs_off_t pos;
+	void *kaddr;
 	int err = 0;
 
 	trace_erofs_map_blocks_enter(inode, map, flags);
@@ -123,9 +175,9 @@ static int erofs_map_blocks(struct inode *inode,
 	pos = ALIGN(iloc(EROFS_SB(sb), vi->nid) + vi->inode_isize +
 		    vi->xattr_isize, unit) + unit * chunknr;
 
-	page = erofs_get_meta_page(inode->i_sb, erofs_blknr(pos));
-	if (IS_ERR(page)) {
-		err = PTR_ERR(page);
+	kaddr = erofs_read_metabuf(&buf, sb, erofs_blknr(pos), EROFS_KMAP);
+	if (IS_ERR(kaddr)) {
+		err = PTR_ERR(kaddr);
 		goto out;
 	}
 	map->m_la = chunknr << vi->chunkbits;
@@ -134,7 +186,7 @@ static int erofs_map_blocks(struct inode *inode,
 
 	/* handle block map */
 	if (!(vi->chunkformat & EROFS_CHUNK_FORMAT_INDEXES)) {
-		__le32 *blkaddr = page_address(page) + erofs_blkoff(pos);
+		__le32 *blkaddr = kaddr + erofs_blkoff(pos);
 
 		if (le32_to_cpu(*blkaddr) == EROFS_NULL_ADDR) {
 			map->m_flags = 0;
@@ -145,7 +197,7 @@ static int erofs_map_blocks(struct inode *inode,
 		goto out_unlock;
 	}
 	/* parse chunk indexes */
-	idx = page_address(page) + erofs_blkoff(pos);
+	idx = kaddr + erofs_blkoff(pos);
 	switch (le32_to_cpu(idx->blkaddr)) {
 	case EROFS_NULL_ADDR:
 		map->m_flags = 0;
@@ -164,8 +216,7 @@ static int erofs_map_blocks(struct inode *inode,
 		break;
 	}
 out_unlock:
-	unlock_page(page);
-	put_page(page);
+	erofs_put_metabuf(&buf);
 out:
 	if (!err)
 		map->m_llen = map->m_plen;
