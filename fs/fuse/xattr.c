@@ -113,6 +113,9 @@ ssize_t fuse_listxattr(struct dentry *entry, char *list, size_t size)
 	struct fuse_getxattr_out outarg;
 	ssize_t ret;
 
+	if (fuse_is_bad(inode))
+		return -EIO;
+
 	if (!fuse_allow_current_process(fc))
 		return -EACCES;
 
@@ -178,6 +181,9 @@ static int fuse_xattr_get(const struct xattr_handler *handler,
 			 struct dentry *dentry, const char *name,
 			 void *value, size_t size)
 {
+	if (fuse_is_bad(d_inode(dentry)))
+		return -EIO;
+		
 	return fuse_getxattr(d_inode(dentry), name, value, size);
 }
 
@@ -186,6 +192,9 @@ static int fuse_xattr_set(const struct xattr_handler *handler,
 			  const void *value, size_t size,
 			  int flags)
 {
+	if (fuse_is_bad(d_inode(dentry)))
+		return -EIO;
+
 	if (!value)
 		return fuse_removexattr(d_inode(dentry), name);
 
