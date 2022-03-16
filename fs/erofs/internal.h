@@ -437,6 +437,8 @@ static inline int z_erofs_map_blocks_iter(struct inode *inode,
 struct page *erofs_get_meta_page(struct super_block *sb, erofs_blk_t blkaddr);
 void erofs_unmap_metabuf(struct erofs_buf *buf);
 void erofs_put_metabuf(struct erofs_buf *buf);
+void *erofs_bread(struct erofs_buf *buf, struct inode *inode,
+		  erofs_blk_t blkaddr, enum erofs_kmap_type type);
 void *erofs_read_metabuf(struct erofs_buf *buf, struct super_block *sb,
 			 erofs_blk_t blkaddr, enum erofs_kmap_type type);
 
