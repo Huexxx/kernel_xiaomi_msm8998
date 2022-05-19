@@ -838,6 +838,8 @@ LowTotal:       747444 kB
 LowFree:          4432 kB
 SwapTotal:           0 kB
 SwapFree:            0 kB
+Zswap:            1904 kB
+Zswapped:         7792 kB
 Dirty:             968 kB
 Writeback:           0 kB
 AnonPages:      861800 kB
@@ -893,6 +895,8 @@ MemAvailable: An estimate of how much memory is available for starting new
    SwapTotal: total amount of swap space available
     SwapFree: Memory which has been evicted from RAM, and is temporarily
               on the disk
+       Zswap: Memory consumed by the zswap backend (compressed size)
+    Zswapped: Amount of anonymous memory stored in zswap (original size)
        Dirty: Memory which is waiting to get written back to the disk
    Writeback: Memory which is actively being written back to the disk
    AnonPages: Non-file backed pages mapped into userspace page tables

@@ -79,6 +79,10 @@ static int meminfo_proc_show(struct seq_file *m, void *v)
 #endif
 		"SwapTotal:      %8lu kB\n"
 		"SwapFree:       %8lu kB\n"
+#ifdef CONFIG_ZSWAP
+		"Zswap:          %8lu kB\n"
+		"Zswapped:       %8lu kB\n"
+#endif
 		"Dirty:          %8lu kB\n"
 		"Writeback:      %8lu kB\n"
 		"AnonPages:      %8lu kB\n"
@@ -136,6 +140,11 @@ static int meminfo_proc_show(struct seq_file *m, void *v)
 #endif
 		K(i.totalswap),
 		K(i.freeswap),
+#ifdef CONFIG_ZSWAP
+		K((unsigned long)(zswap_pool_total_size >> 10)),
+		K((unsigned long)atomic_read(&zswap_stored_pages) <<
+		  (PAGE_SHIFT - 10)),
+#endif
 		K(global_page_state(NR_FILE_DIRTY)),
 		K(global_page_state(NR_WRITEBACK)),
 		K(global_page_state(NR_ANON_PAGES)),
