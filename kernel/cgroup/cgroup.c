@@ -3514,21 +3514,21 @@ static void cgroup_file_release(struct kernfs_open_file *of)
 static int cgroup_io_pressure_show(struct seq_file *seq, void *v)
 {
 	struct cgroup *cgroup = seq_css(seq)->cgroup;
-	struct psi_group *psi = cgroup->id == 1 ? &psi_system : &cgroup->psi;
+	struct psi_group *psi = cgroup->id == 1 ? &psi_system : cgroup->psi;
 
 	return psi_show(seq, psi, PSI_IO);
 }
 static int cgroup_memory_pressure_show(struct seq_file *seq, void *v)
 {
 	struct cgroup *cgroup = seq_css(seq)->cgroup;
-	struct psi_group *psi = cgroup->id == 1 ? &psi_system : &cgroup->psi;
+	struct psi_group *psi = cgroup->id == 1 ? &psi_system : cgroup->psi;
 
 	return psi_show(seq, psi, PSI_MEM);
 }
 static int cgroup_cpu_pressure_show(struct seq_file *seq, void *v)
 {
 	struct cgroup *cgroup = seq_css(seq)->cgroup;
-	struct psi_group *psi = cgroup->id == 1 ? &psi_system : &cgroup->psi;
+	struct psi_group *psi = cgroup->id == 1 ? &psi_system : cgroup->psi;
 
 	return psi_show(seq, psi, PSI_CPU);
 }
@@ -3552,7 +3552,7 @@ static ssize_t cgroup_pressure_write(struct kernfs_open_file *of, char *buf,
 		return -EBUSY;
 	}
 
-	new = psi_trigger_create(&cgrp->psi, buf, nbytes, res);
+	new = psi_trigger_create(cgrp->psi, buf, nbytes, res);
 	if (IS_ERR(new)) {
 		cgroup_put(cgrp);
 		return PTR_ERR(new);
