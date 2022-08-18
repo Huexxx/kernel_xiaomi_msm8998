@@ -774,7 +774,7 @@ static int ps3vram_probe(struct ps3_system_bus_device *dev)
 	gendisk->queue = queue;
 	gendisk->private_data = dev;
 	gendisk->driverfs_dev = &dev->core;
-	strlcpy(gendisk->disk_name, DEVICE_NAME, sizeof(gendisk->disk_name));
+	strscpy(gendisk->disk_name, DEVICE_NAME, sizeof(gendisk->disk_name));
 	set_capacity(gendisk, priv->size >> 9);
 
 	dev_info(&dev->core, "%s: Using %lu MiB of GPU memory\n",
