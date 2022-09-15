@@ -1651,7 +1651,8 @@ static ssize_t do_generic_file_read(struct file *filp, loff_t *ppos,
 		struct page *page;
 		pgoff_t end_index;
 		loff_t isize;
-		unsigned long nr, ret;
+		unsigned long nr, ret, pflags;
+		bool workingset;
 
 		cond_resched();
 find_page:
@@ -1788,9 +1789,14 @@ readpage:
 		 * PG_error will be set again if readpage fails.
 		 */
 		ClearPageError(page);
-		/* Start the actual read. The read will unlock the page. */
-		error = mapping->a_ops->readpage(filp, page);
 
+		/* Start the actual read. The read will unlock the page. */
+		workingset = PageWorkingset(page);
+		if (unlikely(workingset))
+			psi_memstall_enter(&pflags);
+		error = mapping->a_ops->readpage(filp, page);
+		if (unlikely(workingset))
+			psi_memstall_leave(&pflags);
 		if (unlikely(error)) {
 			if (error == AOP_TRUNCATED_PAGE) {
 				put_page(page);

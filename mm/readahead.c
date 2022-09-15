@@ -15,6 +15,7 @@
 #include <linux/task_io_accounting_ops.h>
 #include <linux/pagevec.h>
 #include <linux/pagemap.h>
+#include <linux/psi.h>
 #include <linux/syscalls.h>
 #include <linux/file.h>
 #include <linux/sched.h>
@@ -119,6 +120,8 @@ static void read_pages(struct readahead_control *rac, struct list_head *pages,
 	if (!readahead_count(rac))
 		goto out;
 
+	if (unlikely(rac->_workingset))
+		psi_memstall_enter(&rac->_pflags);
 	blk_start_plug(&plug);
 
 	if (aops->readahead) {
@@ -143,6 +146,9 @@ static void read_pages(struct readahead_control *rac, struct list_head *pages,
 	}
 
 	blk_finish_plug(&plug);
+	if (unlikely(rac->_workingset))
+		psi_memstall_leave(&rac->_pflags);
+	rac->_workingset = false;
 
 	BUG_ON(!list_empty(pages));
 	BUG_ON(readahead_count(rac));
@@ -226,6 +232,7 @@ void page_cache_ra_unbounded(struct readahead_control *ractl,
 		}
 		if (i == nr_to_read - lookahead_size)
 			SetPageReadahead(page);
+		ractl->_workingset |= PageWorkingset(page);
 		ractl->_nr_pages++;
 	}
 
@@ -702,6 +709,10 @@ void readahead_expand(struct readahead_control *ractl,
 		if (add_to_page_cache_lru(page, mapping, index, gfp_mask) < 0) {
 			put_page(page);
 			return;
+		}
+		if (unlikely(PageWorkingset(page)) && !ractl->_workingset) {
+			ractl->_workingset = true;
+			psi_memstall_enter(&ractl->_pflags);
 		}
 		ractl->_nr_pages++;
 		if (ra) {
