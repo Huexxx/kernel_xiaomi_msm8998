@@ -6,6 +6,7 @@
  */
 #include "compress.h"
 #include <linux/overflow.h>
+#include <linux/psi.h>
 
 #include <trace/events/erofs.h>
 
@@ -1404,6 +1405,8 @@ static void z_erofs_submit_queue(struct z_erofs_decompress_frontend *f,
 	pgoff_t uninitialized_var(last_index);
 	unsigned int nr_bios = 0;
 	struct bio *bio = NULL;
+	/* initialize to 1 to make skip psi_memstall_leave unless needed */
+	unsigned long pflags = 1;
 
 	/*
 	 * if managed cache is enabled, bypass jobqueue is needed,
@@ -1446,9 +1449,14 @@ static void z_erofs_submit_queue(struct z_erofs_decompress_frontend *f,
 
 			if (bio && cur != last_index + 1) {
 submit_bio_retry:
+				if (!pflags)
+					psi_memstall_leave(&pflags);
 				submit_bio(bio);
 				bio = NULL;
 			}
+
+			if (unlikely(PageWorkingset(page)))
+				psi_memstall_enter(&pflags);
 
 			if (!bio) {
 				bio = bio_alloc(GFP_NOIO, BIO_MAX_PAGES);
@@ -1477,8 +1485,11 @@ submit_bio_retry:
 			move_to_bypass_jobqueue(pcl, qtail, owned_head);
 	} while (owned_head != Z_EROFS_PCLUSTER_TAIL);
 
-	if (bio)
+	if (bio) {
+		if (!pflags)
+			psi_memstall_leave(&pflags);
 		submit_bio(bio);
+	}
 
 	/*
 	 * although background is preferred, no one is pending for submission.
