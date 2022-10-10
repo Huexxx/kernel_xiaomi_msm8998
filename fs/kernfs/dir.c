@@ -33,10 +33,15 @@ static DEFINE_SPINLOCK(kernfs_idr_lock);	/* root->ino_idr */
 
 #define rb_to_kn(X) rb_entry((X), struct kernfs_node, rb)
 
+static bool __kernfs_active(struct kernfs_node *kn)
+{
+	return atomic_read(&kn->active) >= 0;
+}
+
 static bool kernfs_active(struct kernfs_node *kn)
 {
 	lockdep_assert_held(&kernfs_rwsem);
-	return atomic_read(&kn->active) >= 0;
+	return __kernfs_active(kn);
 }
 
 static bool kernfs_lockdep(struct kernfs_node *kn)
