@@ -444,7 +444,7 @@ int btrfs_submit_compressed_write(struct inode *inode, u64 start,
 static noinline int add_ra_bio_pages(struct inode *inode,
 				     u64 compressed_end,
 				     struct compressed_bio *cb,
-				     unsigned long *pflags)
+				     int *memstall, unsigned long *pflags)
 {
 	unsigned long end_index;
 	unsigned long pg_index;
@@ -502,8 +502,10 @@ static noinline int add_ra_bio_pages(struct inode *inode,
 		 * for these bytes in the file.  But, we have to make
 		 * sure they map to this compressed extent on disk.
 		 */
-		if (PageWorkingset(page))
+		if (!*memstall && PageWorkingset(page)) {
 			psi_memstall_enter(pflags);
+			*memstall = 1;
+		}
 
 		set_page_extent_mapped(page);
 		lock_extent(tree, last_offset, end);
@@ -585,8 +587,8 @@ int btrfs_submit_compressed_read(struct inode *inode, struct bio *bio,
 	u64 em_len;
 	u64 em_start;
 	struct extent_map *em;
-	/* Initialize to 1 to make skip psi_memstall_leave unless needed */
-	unsigned long pflags = 1;
+	unsigned long pflags;
+	int memstall = 0;
 	int ret = -ENOMEM;
 	int faili = 0;
 	u32 *sums;
@@ -650,7 +652,7 @@ int btrfs_submit_compressed_read(struct inode *inode, struct bio *bio,
 	 * interested in.  In all other cases, we can opportunistically
 	 * cache decompressed data that goes beyond the requested range. */
 	if (!(bio_flags & EXTENT_BIO_PARENT_LOCKED))
-		add_ra_bio_pages(inode, em_start + em_len, cb, &pflags);
+		add_ra_bio_pages(inode, em_start + em_len, cb, &memstall, &pflags);
 
 	/* include any pages we added in add_ra-bio_pages */
 	uncompressed_len = bio->bi_vcnt * PAGE_SIZE;
@@ -738,7 +740,7 @@ int btrfs_submit_compressed_read(struct inode *inode, struct bio *bio,
 		bio_endio(comp_bio);
 	}
 
-	if (!pflags)
+	if (memstall)
 		psi_memstall_leave(&pflags);
 
 	bio_put(comp_bio);

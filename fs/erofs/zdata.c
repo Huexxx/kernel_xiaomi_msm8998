@@ -1405,8 +1405,8 @@ static void z_erofs_submit_queue(struct z_erofs_decompress_frontend *f,
 	pgoff_t uninitialized_var(last_index);
 	unsigned int nr_bios = 0;
 	struct bio *bio = NULL;
-	/* initialize to 1 to make skip psi_memstall_leave unless needed */
-	unsigned long pflags = 1;
+	unsigned long pflags;
+	int memstall = 0;
 
 	/*
 	 * if managed cache is enabled, bypass jobqueue is needed,
@@ -1449,14 +1449,18 @@ static void z_erofs_submit_queue(struct z_erofs_decompress_frontend *f,
 
 			if (bio && cur != last_index + 1) {
 submit_bio_retry:
-				if (!pflags)
-					psi_memstall_leave(&pflags);
 				submit_bio(bio);
+				if (memstall) {
+					psi_memstall_leave(&pflags);
+					memstall = 0;
+				}
 				bio = NULL;
 			}
 
-			if (unlikely(PageWorkingset(page)))
+			if (unlikely(PageWorkingset(page)) && !memstall) {
 				psi_memstall_enter(&pflags);
+				memstall = 1;
+			}
 
 			if (!bio) {
 				bio = bio_alloc(GFP_NOIO, BIO_MAX_PAGES);
@@ -1486,9 +1490,9 @@ submit_bio_retry:
 	} while (owned_head != Z_EROFS_PCLUSTER_TAIL);
 
 	if (bio) {
-		if (!pflags)
-			psi_memstall_leave(&pflags);
 		submit_bio(bio);
+		if (memstall)
+			psi_memstall_leave(&pflags);
 	}
 
 	/*
