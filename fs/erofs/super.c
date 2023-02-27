@@ -307,8 +307,6 @@ static int erofs_read_superblock(struct super_block *sb)
 	if (ret < 0)
 		goto out;
 
-	if (erofs_sb_has_ztailpacking(sbi))
-		erofs_info(sb, "EXPERIMENTAL compressed inline data feature in use. Use at your own risk!");
 	if (erofs_sb_has_dedupe(sbi))
 		erofs_info(sb, "EXPERIMENTAL global deduplication feature in use. Use at your own risk!");
 out:
