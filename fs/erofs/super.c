@@ -49,18 +49,21 @@ void _erofs_info(struct super_block *sb, const char *function,
 
 static int erofs_superblock_csum_verify(struct super_block *sb, void *sbdata)
 {
+	size_t len = 1 << EROFS_SB(sb)->blkszbits;
 	struct erofs_super_block *dsb;
 	u32 expected_crc, crc;
 
-	dsb = kmemdup(sbdata + EROFS_SUPER_OFFSET,
-		      EROFS_BLKSIZ - EROFS_SUPER_OFFSET, GFP_KERNEL);
+	if (len > EROFS_SUPER_OFFSET)
+		len -= EROFS_SUPER_OFFSET;
+
+	dsb = kmemdup(sbdata + EROFS_SUPER_OFFSET, len, GFP_KERNEL);
 	if (!dsb)
 		return -ENOMEM;
 
 	expected_crc = le32_to_cpu(dsb->checksum);
 	dsb->checksum = 0;
 	/* to allow for x86 boot sectors and other oddities. */
-	crc = crc32c(~0, dsb, EROFS_BLKSIZ - EROFS_SUPER_OFFSET);
+	crc = crc32c(~0, dsb, len);
 	kfree(dsb);
 
 	if (crc != expected_crc) {
@@ -135,11 +138,11 @@ static void *erofs_read_metadata(struct super_block *sb, struct erofs_buf *buf,
 	int len, i, cnt;
 
 	*offset = round_up(*offset, 4);
-	ptr = erofs_read_metabuf(buf, sb, erofs_blknr(*offset), EROFS_KMAP);
+	ptr = erofs_read_metabuf(buf, sb, erofs_blknr(sb, *offset), EROFS_KMAP);
 	if (IS_ERR(ptr))
 		return ptr;
 
-	len = le16_to_cpu(*(__le16 *)&ptr[erofs_blkoff(*offset)]);
+	len = le16_to_cpu(*(__le16 *)&ptr[erofs_blkoff(sb, *offset)]);
 	if (!len)
 		len = U16_MAX + 1;
 	buffer = kmalloc(len, GFP_KERNEL);
@@ -149,14 +152,15 @@ static void *erofs_read_metadata(struct super_block *sb, struct erofs_buf *buf,
 	*lengthp = len;
 
 	for (i = 0; i < len; i += cnt) {
-		cnt = min(EROFS_BLKSIZ - (int)erofs_blkoff(*offset), len - i);
-		ptr = erofs_read_metabuf(buf, sb, erofs_blknr(*offset),
+		cnt = min_t(int, sb->s_blocksize - erofs_blkoff(sb, *offset),
+			    len - i);
+		ptr = erofs_read_metabuf(buf, sb, erofs_blknr(sb, *offset),
 					 EROFS_KMAP);
 		if (IS_ERR(ptr)) {
 			kfree(buffer);
 			return ptr;
 		}
-		memcpy(buffer + i, ptr + erofs_blkoff(*offset), cnt);
+		memcpy(buffer + i, ptr + erofs_blkoff(sb, *offset), cnt);
 		*offset += cnt;
 	}
 	return buffer;
@@ -562,6 +566,7 @@ static int erofs_fill_super(struct super_block *sb, void *data, int silent)
 		return -ENOMEM;
 
 	sb->s_fs_info = sbi;
+	sbi->blkszbits = PAGE_SHIFT;
 	err = erofs_read_superblock(sb);
 	if (err)
 		return err;
@@ -745,7 +750,7 @@ static int erofs_statfs(struct dentry *dentry, struct kstatfs *buf)
 	u64 id = huge_encode_dev(sb->s_bdev->bd_dev);
 
 	buf->f_type = sb->s_magic;
-	buf->f_bsize = EROFS_BLKSIZ;
+	buf->f_bsize = sb->s_blocksize;
 	buf->f_blocks = sbi->blocks;
 	buf->f_bfree = buf->f_bavail = 0;
 
