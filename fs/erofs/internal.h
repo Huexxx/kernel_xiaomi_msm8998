@@ -184,6 +184,7 @@ enum erofs_kmap_type {
 };
 
 struct erofs_buf {
+	struct inode *inode;
 	struct page *page;
 	void *base;
 	enum erofs_kmap_type kmap_type;
@@ -349,8 +350,9 @@ extern const struct file_operations erofs_dir_fops;
 struct page *erofs_get_meta_page(struct super_block *sb, erofs_blk_t blkaddr);
 void erofs_unmap_metabuf(struct erofs_buf *buf);
 void erofs_put_metabuf(struct erofs_buf *buf);
-void *erofs_bread(struct erofs_buf *buf, struct inode *inode,
-		  erofs_blk_t blkaddr, enum erofs_kmap_type type);
+void *erofs_bread(struct erofs_buf *buf, erofs_blk_t blkaddr,
+		  enum erofs_kmap_type type);
+void erofs_init_metabuf(struct erofs_buf *buf, struct super_block *sb);
 void *erofs_read_metabuf(struct erofs_buf *buf, struct super_block *sb,
 			 erofs_blk_t blkaddr, enum erofs_kmap_type type);
 struct inode *erofs_iget(struct super_block *sb, erofs_nid_t nid, bool dir);
