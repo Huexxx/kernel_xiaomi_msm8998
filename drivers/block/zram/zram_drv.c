@@ -1995,48 +1995,9 @@ static void zram_bio_discard(struct zram *zram, struct bio *bio)
 	bio_endio(bio);
 }
 
-/*
- * Returns errno if it has some problem. Otherwise return 0 or 1.
- * Returns 0 if IO request was done synchronously
- * Returns 1 if IO request was successfully submitted.
- */
-static int zram_bvec_rw(struct zram *zram, struct bio_vec *bvec, u32 index,
-			int offset, unsigned int op, struct bio *bio)
+static void zram_bio_read(struct zram *zram, struct bio *bio)
 {
 	unsigned long start_time = jiffies;
-	int rw_acct = op_is_write(op) ? REQ_OP_WRITE : REQ_OP_READ;
-	int ret;
-
-	generic_start_io_acct(rw_acct, bvec->bv_len >> SECTOR_SHIFT,
-			&zram->disk->part0);
-
-	if (!op_is_write(op)) {
-		ret = zram_bvec_read(zram, bvec, index, offset, bio);
-		if (unlikely(ret < 0)) {
-			atomic64_inc(&zram->stats.failed_reads);
-			generic_end_io_acct(rw_acct, &zram->disk->part0, start_time);
-			return ret;
-		}
-		flush_dcache_page(bvec->bv_page);
-	} else {
-		ret = zram_bvec_write(zram, bvec, index, offset, bio);
-		if (unlikely(ret < 0)) {
-			atomic64_inc(&zram->stats.failed_writes);
-			generic_end_io_acct(rw_acct, &zram->disk->part0, start_time);
-			return ret;
-		}
-	}
-
-	generic_end_io_acct(rw_acct, &zram->disk->part0, start_time);
-
-	zram_slot_lock(zram, index);
-	zram_accessed(zram, index);
-	zram_slot_unlock(zram, index);
-	return 0;
-}
-
-static void __zram_make_request(struct zram *zram, struct bio *bio)
-{
 	struct bvec_iter iter;
 	struct bio_vec bv;
 
@@ -2045,10 +2006,54 @@ static void __zram_make_request(struct zram *zram, struct bio *bio)
 		u32 offset = (iter.bi_sector & (SECTORS_PER_PAGE - 1)) <<
 				SECTOR_SHIFT;
 
-		if (zram_bvec_rw(zram, &bv, index, offset, bio_op(bio),
-				bio) < 0) {
+		generic_start_io_acct(REQ_OP_READ, bv.bv_len >> SECTOR_SHIFT,
+				      &zram->disk->part0);
+
+		if (zram_bvec_read(zram, &bv, index, offset, bio) < 0) {
+			atomic64_inc(&zram->stats.failed_reads);
+			generic_end_io_acct(REQ_OP_READ, &zram->disk->part0, start_time);
 			goto out;
 		}
+		flush_dcache_page(bv.bv_page);
+
+		generic_end_io_acct(REQ_OP_READ, &zram->disk->part0, start_time);
+
+		zram_slot_lock(zram, index);
+		zram_accessed(zram, index);
+		zram_slot_unlock(zram, index);
+	}
+
+	bio_endio(bio);
+	return;
+
+out:
+	bio_io_error(bio);
+}
+
+static void zram_bio_write(struct zram *zram, struct bio *bio)
+{
+	unsigned long start_time = jiffies;
+	struct bvec_iter iter;
+	struct bio_vec bv;
+
+	bio_for_each_segment(bv, bio, iter) {
+		u32 index = iter.bi_sector >> SECTORS_PER_PAGE_SHIFT;
+		u32 offset = (iter.bi_sector & (SECTORS_PER_PAGE - 1)) <<
+				SECTOR_SHIFT;
+
+		generic_start_io_acct(REQ_OP_WRITE, bv.bv_len >> SECTOR_SHIFT,
+				      &zram->disk->part0);
+
+		if (zram_bvec_write(zram, &bv, index, offset, bio) < 0) {
+			atomic64_inc(&zram->stats.failed_writes);
+			generic_end_io_acct(REQ_OP_WRITE, &zram->disk->part0, start_time);
+			goto out;
+		}
+		generic_end_io_acct(REQ_OP_WRITE, &zram->disk->part0, start_time);
+
+		zram_slot_lock(zram, index);
+		zram_accessed(zram, index);
+		zram_slot_unlock(zram, index);
 	}
 
 	bio_endio(bio);
@@ -2073,8 +2078,10 @@ static blk_qc_t zram_make_request(struct request_queue *queue, struct bio *bio)
 
 	switch (bio_op(bio)) {
 	case REQ_OP_READ:
+		zram_bio_read(zram, bio);
+		break;
 	case REQ_OP_WRITE:
-		__zram_make_request(zram, bio);
+		zram_bio_write(zram, bio);
 		break;
 	case REQ_OP_DISCARD:
 		zram_bio_discard(zram, bio);
