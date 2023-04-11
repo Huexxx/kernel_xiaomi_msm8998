@@ -52,7 +52,7 @@ static size_t huge_class_size;
 
 static void zram_free_page(struct zram *zram, size_t index);
 static int zram_read_page(struct zram *zram, struct page *page, u32 index,
-			  struct bio *bio, bool partial_io);
+			  struct bio *parent);
 
 static int zram_slot_trylock(struct zram *zram, u32 index)
 {
@@ -619,33 +619,17 @@ static void free_block_bdev(struct zram *zram, unsigned long blk_idx)
 	atomic64_dec(&zram->stats.bd_count);
 }
 
-static void zram_page_end_io(struct bio *bio)
-{
-	struct page *page = bio->bi_io_vec[0].bv_page;
-
-	page_endio(page, bio_data_dir(bio), bio->bi_error);
-	bio_put(bio);
-}
-
 static void read_from_bdev_async(struct zram *zram, struct page *page,
 			unsigned long entry, struct bio *parent)
 {
 	struct bio *bio;
 
 	bio = bio_alloc(GFP_NOIO, 1);
-
 	bio->bi_iter.bi_sector = entry * (PAGE_SIZE >> 9);
 	bio->bi_bdev = zram->bdev;
 	bio_add_page(bio, page, PAGE_SIZE, 0);
-
-	if (!parent) {
-		bio->bi_opf = 0;
-		bio->bi_end_io = zram_page_end_io;
-	} else {
-		bio->bi_opf = parent->bi_opf;
-		bio_chain(bio, parent);
-	}
-
+	bio->bi_opf = parent->bi_opf;
+	bio_chain(bio, parent);
 	bio->bi_opf = READ;
 	submit_bio(bio);
 }
@@ -751,7 +735,7 @@ static ssize_t writeback_store(struct device *dev,
 		/* Need for hugepage writeback racing */
 		zram_set_flag(zram, index, ZRAM_IDLE);
 		zram_slot_unlock(zram, index);
-		if (zram_read_page(zram, page, index, NULL, false)) {
+		if (zram_read_page(zram, page, index, NULL)) {
 			zram_slot_lock(zram, index);
 			zram_clear_flag(zram, index, ZRAM_UNDER_WB);
 			zram_clear_flag(zram, index, ZRAM_IDLE);
@@ -835,18 +819,25 @@ struct zram_work {
 	struct work_struct work;
 	struct zram *zram;
 	unsigned long entry;
-	struct bio *bio;
 	struct page *page;
 };
 
 static void zram_sync_read(struct work_struct *work)
 {
 	struct zram_work *zw = container_of(work, struct zram_work, work);
-	struct zram *zram = zw->zram;
-	unsigned long entry = zw->entry;
-	struct bio *bio = zw->bio;
+	struct bio_vec bv;
+	struct bio bio;
 
-	read_from_bdev_async(zram, zw->page, entry, bio);
+	bio_init(&bio);
+
+	bio.bi_max_vecs = 1;
+	bio.bi_io_vec = &bv;
+	bio.bi_bdev = zw->zram->bdev;
+
+	bio.bi_iter.bi_sector = zw->entry * (PAGE_SIZE >> 9);
+	bio_add_page(&bio, zw->page, PAGE_SIZE, 0);
+	bio_set_op_attrs(&bio, REQ_OP_READ, 0);
+	submit_bio_wait(&bio);
 }
 
 /*
@@ -855,14 +846,13 @@ static void zram_sync_read(struct work_struct *work)
  * it's a deadlock. To avoid, it, it uses worker thread context.
  */
 static int read_from_bdev_sync(struct zram *zram, struct page *page,
-				unsigned long entry, struct bio *bio)
+				unsigned long entry)
 {
 	struct zram_work work;
 
 	work.page = page;
 	work.zram = zram;
 	work.entry = entry;
-	work.bio = bio;
 
 	INIT_WORK_ONSTACK(&work.work, zram_sync_read);
 	queue_work(system_unbound_wq, &work.work);
@@ -873,13 +863,13 @@ static int read_from_bdev_sync(struct zram *zram, struct page *page,
 }
 
 static int read_from_bdev(struct zram *zram, struct page *page,
-			unsigned long entry, struct bio *parent, bool sync)
+			unsigned long entry, struct bio *parent)
 {
 	atomic64_inc(&zram->stats.bd_reads);
-	if (sync) {
+	if (!parent) {
 		if (WARN_ON_ONCE(!IS_ENABLED(ZRAM_PARTIAL_IO)))
 			return -EIO;
-		return read_from_bdev_sync(zram, page, entry, parent);
+		return read_from_bdev_sync(zram, page, entry);
 	}
 	read_from_bdev_async(zram, page, entry, parent);
 	return 1;
@@ -887,7 +877,7 @@ static int read_from_bdev(struct zram *zram, struct page *page,
 #else
 static inline void reset_bdev(struct zram *zram) {};
 static int read_from_bdev(struct zram *zram, struct page *page,
-			unsigned long entry, struct bio *parent, bool sync)
+			unsigned long entry, struct bio *parent)
 {
 	return -EIO;
 }
@@ -1429,7 +1419,7 @@ static int zram_read_from_zspool(struct zram *zram, struct page *page,
 }
 
 static int zram_read_page(struct zram *zram, struct page *page, u32 index,
-			  struct bio *bio, bool partial_io)
+			  struct bio *parent)
 {
 	int ret;
 
@@ -1445,12 +1435,12 @@ static int zram_read_page(struct zram *zram, struct page *page, u32 index,
 		 */
 		zram_slot_unlock(zram, index);
 
-		/* A null bio means rw_page was used, we must fallback to bio */
-		if (!bio)
+		/* A null parent means rw_page was used, we must fallback to bio */
+		if (!parent)
 			return -EOPNOTSUPP;
 
 		ret = read_from_bdev(zram, page, zram_get_element(zram, index),
-				     bio, partial_io);
+				     parent);
 	}
 
 	/* Should NEVER happen. Return bio error if it does. */
@@ -1465,14 +1455,14 @@ static int zram_read_page(struct zram *zram, struct page *page, u32 index,
  * always expects a full page for the output.
  */
 static int zram_bvec_read_partial(struct zram *zram, struct bio_vec *bvec,
-				  u32 index, int offset, struct bio *bio)
+				  u32 index, int offset)
 {
 	struct page *page = alloc_page(GFP_NOIO);
 	int ret;
 
 	if (!page)
 		return -ENOMEM;
-	ret = zram_read_page(zram, page, index, bio, true);
+	ret = zram_read_page(zram, page, index, NULL);
 	if (likely(!ret))
 		memcpy(page_address(bvec->bv_page) + bvec->bv_offset,
 		       page_address(page) + offset, bvec->bv_len);
@@ -1484,8 +1474,8 @@ static int zram_bvec_read(struct zram *zram, struct bio_vec *bvec,
 			  u32 index, int offset, struct bio *bio)
 {
 	if (is_partial_io(bvec))
-		return zram_bvec_read_partial(zram, bvec, index, offset, bio);
-	return zram_read_page(zram, bvec->bv_page, index, bio, false);
+		return zram_bvec_read_partial(zram, bvec, index, offset);
+	return zram_read_page(zram, bvec->bv_page, index, bio);
 }
 
 static int zram_write_page(struct zram *zram, struct page *page, u32 index)
@@ -1626,7 +1616,7 @@ static int zram_bvec_write_partial(struct zram *zram, struct bio_vec *bvec,
 	if (!page)
 		return -ENOMEM;
 
-	ret = zram_read_page(zram, page, index, bio, true);
+	ret = zram_read_page(zram, page, index, bio);
 	if (!ret) {
 		memcpy(page_address(page) + offset, page_address(bvec->bv_page) +
 		       bvec->bv_offset, bvec->bv_len);
