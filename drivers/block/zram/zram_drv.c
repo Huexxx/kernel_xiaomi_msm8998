@@ -51,8 +51,8 @@ static unsigned int num_devices = 1;
 static size_t huge_class_size;
 
 static void zram_free_page(struct zram *zram, size_t index);
-static int zram_bvec_read(struct zram *zram, struct bio_vec *bvec,
-				u32 index, int offset, struct bio *bio);
+static int zram_read_page(struct zram *zram, struct page *page, u32 index,
+			  struct bio *bio, bool partial_io);
 
 static int zram_slot_trylock(struct zram *zram, u32 index)
 {
@@ -673,6 +673,7 @@ static ssize_t writeback_store(struct device *dev,
 	unsigned long nr_pages = zram->disksize >> PAGE_SHIFT;
 	unsigned long index = 0;
 	struct bio bio;
+	struct bio_vec bio_vec;
 	struct page *page;
 	ssize_t ret = len;
 	int mode, err;
@@ -716,12 +717,6 @@ static ssize_t writeback_store(struct device *dev,
 	}
 
 	for (; nr_pages != 0; index++, nr_pages--) {
-		struct bio_vec bvec;
-
-		bvec.bv_page = page;
-		bvec.bv_len = PAGE_SIZE;
-		bvec.bv_offset = 0;
-
 		spin_lock(&zram->wb_limit_lock);
 		if (zram->wb_limit_enable && !zram->bd_wb_limit) {
 			spin_unlock(&zram->wb_limit_lock);
@@ -765,7 +760,7 @@ static ssize_t writeback_store(struct device *dev,
 		/* Need for hugepage writeback racing */
 		zram_set_flag(zram, index, ZRAM_IDLE);
 		zram_slot_unlock(zram, index);
-		if (zram_bvec_read(zram, &bvec, index, 0, NULL)) {
+		if (zram_read_page(zram, page, index, NULL, false)) {
 			zram_slot_lock(zram, index);
 			zram_clear_flag(zram, index, ZRAM_UNDER_WB);
 			zram_clear_flag(zram, index, ZRAM_IDLE);
@@ -776,12 +771,11 @@ static ssize_t writeback_store(struct device *dev,
 		bio_init(&bio);
 
 		bio.bi_max_vecs = 1;
-		bio.bi_io_vec = &bvec;
+		bio.bi_io_vec = &bio_vec;
 		bio.bi_bdev = zram->bdev;
 
 		bio.bi_iter.bi_sector = blk_idx * (PAGE_SIZE >> 9);
-		bio_add_page(&bio, bvec.bv_page, bvec.bv_len,
-				bvec.bv_offset);
+		bio_add_page(&bio, page, PAGE_SIZE, 0);
 		bio_set_op_attrs(&bio, REQ_OP_WRITE, REQ_SYNC);
 		/*
 		 * XXX: A single page IO would be inefficient for write
