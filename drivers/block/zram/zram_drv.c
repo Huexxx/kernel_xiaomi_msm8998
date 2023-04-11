@@ -2038,11 +2038,6 @@ static void __zram_make_request(struct zram *zram, struct bio *bio)
 	struct bvec_iter iter;
 	struct bio_vec bv;
 
-	if (unlikely(bio_op(bio) == REQ_OP_DISCARD)) {
-		zram_bio_discard(zram, bio);
-		return;
-	}
-
 	bio_for_each_segment(bv, bio, iter) {
 		u32 index = iter.bi_sector >> SECTORS_PER_PAGE_SHIFT;
 		u32 offset = (iter.bi_sector & (SECTORS_PER_PAGE - 1)) <<
@@ -2074,7 +2069,18 @@ static blk_qc_t zram_make_request(struct request_queue *queue, struct bio *bio)
 		goto error;
 	}
 
-	__zram_make_request(zram, bio);
+	switch (bio_op(bio)) {
+	case REQ_OP_READ:
+	case REQ_OP_WRITE:
+		__zram_make_request(zram, bio);
+		break;
+	case REQ_OP_DISCARD:
+		zram_bio_discard(zram, bio);
+		break;
+	default:
+		WARN_ON_ONCE(1);
+		bio_endio(bio);
+	}
 	return BLK_QC_T_NONE;
 
 error:
