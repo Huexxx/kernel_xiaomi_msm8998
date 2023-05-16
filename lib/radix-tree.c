@@ -41,6 +41,7 @@
 #include <linux/string.h>
 #include <linux/xarray.h>
 
+#include "radix-tree.h"
 
 /* Number of nodes in fully populated tree of given height */
 static unsigned long height_to_maxnodes[RADIX_TREE_MAX_PATH + 1] __read_mostly;
