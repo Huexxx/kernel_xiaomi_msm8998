@@ -1287,7 +1287,7 @@ void *zs_map_object(struct zs_pool *pool, unsigned long handle,
 
 	get_zspage_mapping(zspage, &class_idx, &fg);
 	class = pool->size_class[class_idx];
-	off = (class->size * obj_idx) & ~PAGE_MASK;
+	off = offset_in_page(class->size * obj_idx);
 
 	area = &get_cpu_var(zs_map_area);
 	area->vm_mm = mm;
@@ -1329,7 +1329,7 @@ void zs_unmap_object(struct zs_pool *pool, unsigned long handle)
 	zspage = get_zspage(page);
 	get_zspage_mapping(zspage, &class_idx, &fg);
 	class = pool->size_class[class_idx];
-	off = (class->size * obj_idx) & ~PAGE_MASK;
+	off = offset_in_page(class->size * obj_idx);
 
 	area = this_cpu_ptr(&zs_map_area);
 	if (off + class->size <= PAGE_SIZE)
@@ -1385,7 +1385,7 @@ static unsigned long obj_malloc(struct size_class *class,
 
 	offset = obj * class->size;
 	nr_page = offset >> PAGE_SHIFT;
-	m_offset = offset & ~PAGE_MASK;
+	m_offset = offset_in_page(offset);
 	m_page = get_first_page(zspage);
 
 	for (i = 0; i < nr_page; i++)
@@ -1487,7 +1487,7 @@ static void obj_free(struct size_class *class, unsigned long obj)
 	void *vaddr;
 
 	obj_to_location(obj, &f_page, &f_objidx);
-	f_offset = (class->size * f_objidx) & ~PAGE_MASK;
+	f_offset = offset_in_page(class->size * f_objidx);
 	zspage = get_zspage(f_page);
 
 	vaddr = kmap_atomic(f_page);
@@ -1561,8 +1561,8 @@ static void zs_object_copy(struct size_class *class, unsigned long dst,
 	obj_to_location(src, &s_page, &s_objidx);
 	obj_to_location(dst, &d_page, &d_objidx);
 
-	s_off = (class->size * s_objidx) & ~PAGE_MASK;
-	d_off = (class->size * d_objidx) & ~PAGE_MASK;
+	s_off = offset_in_page(class->size * s_objidx);
+	d_off = offset_in_page(class->size * d_objidx);
 
 	if (s_off + class->size > PAGE_SIZE)
 		s_size = PAGE_SIZE - s_off;
