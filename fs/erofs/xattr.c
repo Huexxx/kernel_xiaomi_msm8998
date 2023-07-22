@@ -5,6 +5,7 @@
  * Copyright (C) 2021-2022, Alibaba Cloud
  */
 #include <linux/security.h>
+#include <linux/xxhash.h>
 #include "xattr.h"
 
 static inline erofs_blk_t erofs_xattr_blkaddr(struct super_block *sb,
@@ -92,6 +93,7 @@ static int erofs_init_inode_xattrs(struct inode *inode)
 	}
 
 	ih = (struct erofs_xattr_ibody_header *)(it.kaddr + it.ofs);
+	vi->xattr_name_filter = le32_to_cpu(ih->h_name_filter);
 	vi->xattr_shared_count = ih->h_shared_count;
 	vi->xattr_shared_xattrs = kmalloc_array(vi->xattr_shared_count,
 						sizeof(uint), GFP_KERNEL);
@@ -400,7 +402,10 @@ int erofs_getxattr(struct inode *inode, int index,
 		   void *buffer, size_t buffer_size)
 {
 	int ret;
+	unsigned int hashbit;
 	struct getxattr_iter it;
+	struct erofs_inode *vi = EROFS_I(inode);
+	struct erofs_sb_info *sbi = EROFS_SB(inode->i_sb);
 
 	if (!name)
 		return -EINVAL;
@@ -408,6 +413,15 @@ int erofs_getxattr(struct inode *inode, int index,
 	ret = erofs_init_inode_xattrs(inode);
 	if (ret)
 		return ret;
+
+	/* reserved flag is non-zero if there's any change of on-disk format */
+	if (erofs_sb_has_xattr_filter(sbi) && !sbi->xattr_filter_reserved) {
+		hashbit = xxh32(name, strlen(name),
+				EROFS_XATTR_FILTER_SEED + index);
+		hashbit &= EROFS_XATTR_FILTER_BITS - 1;
+		if (vi->xattr_name_filter & (1U << hashbit))
+			return -ENOATTR;
+	}
 
 	it.index = index;
 	it.name.len = strlen(name);
