@@ -646,8 +646,6 @@ static void erofs_kill_sb(struct super_block *sb)
 {
 	struct erofs_sb_info *sbi;
 
-	WARN_ON(sb->s_magic != EROFS_SUPER_MAGIC);
-
 	kill_block_super(sb);
 
 	sbi = EROFS_SB(sb);
