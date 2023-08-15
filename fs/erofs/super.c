@@ -17,8 +17,7 @@
 
 static struct kmem_cache *erofs_inode_cachep __read_mostly;
 
-void _erofs_err(struct super_block *sb, const char *function,
-		const char *fmt, ...)
+void _erofs_err(struct super_block *sb, const char *func, const char *fmt, ...)
 {
 	struct va_format vaf;
 	va_list args;
@@ -28,12 +27,11 @@ void _erofs_err(struct super_block *sb, const char *function,
 	vaf.fmt = fmt;
 	vaf.va = &args;
 
-	pr_err("(device %s): %s: %pV", sb->s_id, function, &vaf);
+	pr_err("(device %s): %s: %pV", sb->s_id, func, &vaf);
 	va_end(args);
 }
 
-void _erofs_info(struct super_block *sb, const char *function,
-		 const char *fmt, ...)
+void _erofs_info(struct super_block *sb, const char *func, const char *fmt, ...)
 {
 	struct va_format vaf;
 	va_list args;
@@ -99,11 +97,9 @@ static void erofs_i_callback(struct rcu_head *head)
 	struct inode *inode = container_of(head, struct inode, i_rcu);
 	struct erofs_inode *vi = EROFS_I(inode);
 
-	/* be careful of RCU symlink path */
 	if (inode->i_op == &erofs_fast_symlink_iops)
 		kfree(inode->i_link);
 	kfree(vi->xattr_shared_xattrs);
-
 	kmem_cache_free(erofs_inode_cachep, vi);
 }
 
@@ -116,8 +112,7 @@ static bool check_layout_compatibility(struct super_block *sb,
 
 	/* check if current kernel meets all mandatory requirements */
 	if (feature & (~EROFS_ALL_FEATURE_INCOMPAT)) {
-		erofs_err(sb,
-			  "unidentified incompatible feature %x, please upgrade kernel version",
+		erofs_err(sb, "unidentified incompatible feature %x, please upgrade kernel",
 			   feature & ~EROFS_ALL_FEATURE_INCOMPAT);
 		return false;
 	}
@@ -353,7 +348,6 @@ static int erofs_build_cache_strategy(struct super_block *sb,
 }
 #endif
 
-/* set up default EROFS parameters */
 static void erofs_default_options(struct erofs_sb_info *sbi)
 {
 #ifdef CONFIG_EROFS_FS_ZIP
@@ -605,7 +599,6 @@ static int erofs_fill_super(struct super_block *sb, void *data, int silent)
 	xa_init(&sbi->managed_pslots);
 #endif
 
-	/* get the root inode */
 	inode = erofs_iget(sb, ROOT_NID(sbi), true);
 	if (IS_ERR(inode))
 		return PTR_ERR(inode);
@@ -622,7 +615,6 @@ static int erofs_fill_super(struct super_block *sb, void *data, int silent)
 		return -ENOMEM;
 
 	erofs_shrinker_register(sb);
-	/* sb->s_umount is already locked, SB_ACTIVE and SB_BORN are not set */
 	err = erofs_init_managed_cache(sb);
 	if (err)
 		return err;
@@ -642,10 +634,6 @@ static struct dentry *erofs_mount(struct file_system_type *fs_type, int flags,
 	return mount_bdev(fs_type, flags, dev_name, data, erofs_fill_super);
 }
 
-/*
- * could be triggered after deactivate_locked_super()
- * is called, thus including umount and failed to initialize.
- */
 static void erofs_kill_sb(struct super_block *sb)
 {
 	struct erofs_sb_info *sbi;
@@ -659,7 +647,6 @@ static void erofs_kill_sb(struct super_block *sb)
 	sb->s_fs_info = NULL;
 }
 
-/* called when ->s_root is non-NULL */
 static void erofs_put_super(struct super_block *sb)
 {
 	struct erofs_sb_info *const sbi = EROFS_SB(sb);
@@ -754,7 +741,6 @@ static void __exit erofs_module_exit(void)
 	erofs_pcpubuf_exit();
 }
 
-/* get filesystem statistics */
 static int erofs_statfs(struct dentry *dentry, struct kstatfs *buf)
 {
 	struct super_block *sb = dentry->d_sb;
