@@ -303,11 +303,6 @@ static int erofs_read_superblock(struct super_block *sb)
 	else
 		ret = z_erofs_load_lz4_config(sb, dsb, NULL, 0);
 
-	if (ret < 0)
-		goto out;
-
-	if (erofs_sb_has_dedupe(sbi))
-		erofs_info(sb, "EXPERIMENTAL global deduplication feature in use. Use at your own risk!");
 out:
 	erofs_put_metabuf(&buf);
 	return ret;
