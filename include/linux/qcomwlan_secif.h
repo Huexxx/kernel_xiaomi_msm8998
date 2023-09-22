@@ -28,8 +28,6 @@ extern int wcnss_wlan_crypto_ahash_digest(struct ahash_request *req);
 extern void wcnss_wlan_crypto_free_ahash(struct crypto_ahash *tfm);
 extern int wcnss_wlan_crypto_ahash_setkey(struct crypto_ahash *tfm,
 					const u8 *key, unsigned int keylen);
-extern struct crypto_ablkcipher *
-wcnss_wlan_crypto_alloc_ablkcipher(const char *alg_name, u32 type, u32 mask);
 extern void wcnss_wlan_ablkcipher_request_free(struct ablkcipher_request *req);
 extern void wcnss_wlan_crypto_free_cipher(struct crypto_cipher *tfm);
 extern void wcnss_wlan_crypto_free_ablkcipher(struct crypto_ablkcipher *tfm);
