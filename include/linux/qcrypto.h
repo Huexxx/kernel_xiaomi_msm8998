@@ -55,7 +55,7 @@ int qcrypto_cipher_set_device_hw(struct ablkcipher_request *req,
 struct qcrypto_func_set {
 	int (*cipher_set)(struct ablkcipher_request *req,
 			unsigned int fde_pfe,
-			unsigned hw_inst);
+			unsigned int hw_inst);
 	int (*cipher_flag)(struct ablkcipher_request *req, unsigned int flags);
 	int (*get_num_engines)(void);
 	void (*get_engine_list)(size_t num_engines,
