@@ -42,13 +42,6 @@ int wcnss_wlan_crypto_ahash_setkey(struct crypto_ahash *tfm, const u8 *key,
 }
 EXPORT_SYMBOL(wcnss_wlan_crypto_ahash_setkey);
 
-struct crypto_ablkcipher *
-wcnss_wlan_crypto_alloc_ablkcipher(const char *alg_name, u32 type, u32 mask)
-{
-	return crypto_alloc_ablkcipher(alg_name, type, mask);
-}
-EXPORT_SYMBOL(wcnss_wlan_crypto_alloc_ablkcipher);
-
 void wcnss_wlan_ablkcipher_request_free(struct ablkcipher_request *req)
 {
 	ablkcipher_request_free(req);
