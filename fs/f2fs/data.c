@@ -323,7 +323,7 @@ static struct bio *__bio_alloc(struct f2fs_io_info *fio, int npages)
 }
 
 static inline void __submit_bio(struct f2fs_sb_info *sbi,
-				struct bio *bio, enum page_type type)
+								struct bio *bio, enum page_type type)
 {
 	if (!is_read_io(bio_op(bio))) {
 		unsigned int start;
@@ -2927,11 +2927,11 @@ static void f2fs_dio_end_io(struct bio *bio)
 	bio_endio(bio);
 }
 
-static void f2fs_dio_submit_bio(int rw, struct bio *bio, struct inode *inode,
+static void f2fs_dio_submit_bio(struct bio *bio, struct inode *inode,
 							loff_t file_offset)
 {
 	struct f2fs_private_dio *dio;
-	bool write = (rw == REQ_OP_WRITE);
+	bool write = (bio_op(bio) == REQ_OP_WRITE);
 
 	dio = f2fs_kzalloc(F2FS_I_SB(inode),
 			sizeof(struct f2fs_private_dio), GFP_NOFS);
@@ -2949,7 +2949,6 @@ static void f2fs_dio_submit_bio(int rw, struct bio *bio, struct inode *inode,
 	inc_page_count(F2FS_I_SB(inode),
 			write ? F2FS_DIO_WRITE : F2FS_DIO_READ);
 
-	bio->bi_rw = rw;
 	submit_bio(bio);
 	return;
 out:
