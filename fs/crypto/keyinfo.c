@@ -210,6 +210,7 @@ static void put_crypt_info(struct fscrypt_info *ci)
 
 	crypto_free_skcipher(ci->ci_ctfm);
 	crypto_free_cipher(ci->ci_essiv_tfm);
+	memset(ci, 0, sizeof(*ci)); /* sanitizes ->ci_raw_key */
 	kmem_cache_free(fscrypt_info_cachep, ci);
 }
 
@@ -355,6 +356,18 @@ int fscrypt_get_encryption_info(struct inode *inode)
 	if (res)
 		goto out;
 
+	if (is_private_data_mode(crypt_info)) {
+		if (!fscrypt_is_ice_capable(inode->i_sb)) {
+			pr_warn("%s: ICE support not available\n",
+				__func__);
+			res = -EINVAL;
+			goto out;
+		}
+		/* Let's encrypt/decrypt by ICE */
+		memcpy(crypt_info->ci_raw_key, raw_key, mode->keysize);
+		goto do_ice;
+	}
+
 	ctfm = crypto_alloc_skcipher(mode->cipher_str, 0, 0);
 	if (IS_ERR(ctfm)) {
 		res = PTR_ERR(ctfm);
@@ -384,7 +397,8 @@ int fscrypt_get_encryption_info(struct inode *inode)
 
 	if (S_ISREG(inode->i_mode) &&
 	    crypt_info->ci_data_mode == FS_ENCRYPTION_MODE_AES_128_CBC) {
-		res = init_essiv_generator(crypt_info, raw_key, mode->keysize);
+		res = init_essiv_generator(crypt_info, crypt_info->ci_raw_key,
+						mode->keysize);
 		if (res) {
 			fscrypt_warn(inode->i_sb,
 				     "error initializing ESSIV generator for inode %lu: %d",
@@ -392,6 +406,9 @@ int fscrypt_get_encryption_info(struct inode *inode)
 			goto out;
 		}
 	}
+	memzero_explicit(crypt_info->ci_raw_key,
+		sizeof(crypt_info->ci_raw_key));
+do_ice:
 	if (cmpxchg_release(&inode->i_crypt_info, NULL, crypt_info) == NULL)
 		crypt_info = NULL;
 out:
