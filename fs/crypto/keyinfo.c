@@ -176,7 +176,7 @@ static struct fscrypt_mode {
 	},
 	[FS_ENCRYPTION_MODE_PRIVATE] = {
 		.friendly_name = "ICE",
-		.cipher_str = "bugon",
+		.cipher_str = "xts(aes)",
 		.keysize = 64,
 	},
 };
