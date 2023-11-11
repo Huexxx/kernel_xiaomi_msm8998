@@ -37,9 +37,8 @@ static void __fscrypt_decrypt_bio(struct bio *bio, bool done)
 			SetPageUptodate(page);
 		} else {
 			int ret = fscrypt_decrypt_pagecache_blocks(page, bv->bv_len,
-							   bv->bv_offset);
+								   bv->bv_offset);
 			if (ret) {
-				WARN_ON_ONCE(1);
 				SetPageError(page);
 			} else if (done) {
 				SetPageUptodate(page);
@@ -110,6 +109,8 @@ int fscrypt_zeroout_range(const struct inode *inode, pgoff_t lblk,
 			goto errout;
 		}
 		err = submit_bio_wait(bio);
+		if (err == 0 && bio->bi_error)
+			err = -EIO;
 		bio_put(bio);
 		if (err)
 			goto errout;
