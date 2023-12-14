@@ -161,7 +161,6 @@ struct fuse_file {
 
 	/* the read write file */
 	struct file *passthrough_filp;
-	bool passthrough_enabled;
 };
 
 /** One input argument of a request */
