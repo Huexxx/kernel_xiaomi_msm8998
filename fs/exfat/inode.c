@@ -450,12 +450,12 @@ static int exfat_write_end(struct file *file, struct address_space *mapping,
 }
 
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 7, 0)
+//#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 7, 0)
 static ssize_t exfat_direct_IO(struct kiocb *iocb, struct iov_iter *iter)
-#else
+/*#else
 static ssize_t exfat_direct_IO(struct kiocb *iocb, struct iov_iter *iter,
                              loff_t offset)
-#endif
+#endif*/
 {
 	struct address_space *mapping = iocb->ki_filp->f_mapping;
 	struct inode *inode = mapping->host;
@@ -481,11 +481,11 @@ static ssize_t exfat_direct_IO(struct kiocb *iocb, struct iov_iter *iter,
 	 * Need to use the DIO_LOCKING for avoiding the race
 	 * condition of exfat_get_block() and ->truncate().
 	 */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 7, 0)
+//#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 7, 0)
 	ret = blockdev_direct_IO(iocb, inode, iter, exfat_get_block);
-#else
+/*#else
 	ret = blockdev_direct_IO(iocb, inode, iter, offset, exfat_get_block);
-#endif
+#endif*/
 	if (ret < 0 && (rw & WRITE))
 		exfat_write_failed(mapping, size);
 	return ret;
