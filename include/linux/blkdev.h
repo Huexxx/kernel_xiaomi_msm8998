@@ -184,6 +184,8 @@ struct request {
 	unsigned int resid_len;	/* residual count */
 	void *sense;
 
+	unsigned short write_hint;
+
 	unsigned long deadline;
 	struct list_head timeout_list;
 	unsigned int timeout;
