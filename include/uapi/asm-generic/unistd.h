@@ -715,6 +715,10 @@ __SYSCALL(__NR_userfaultfd, sys_userfaultfd)
 __SYSCALL(__NR_membarrier, sys_membarrier)
 #define __NR_mlock2 284
 __SYSCALL(__NR_mlock2, sys_mlock2)
+#define __NR_preadv2 286
+__SC_COMP(__NR_preadv2, sys_preadv2, compat_sys_preadv2)
+#define __NR_pwritev2 287
+__SC_COMP(__NR_pwritev2, sys_pwritev2, compat_sys_pwritev2)
 #define __NR_pidfd_send_signal 424
 __SYSCALL(__NR_pidfd_send_signal, sys_pidfd_send_signal)
 #define __NR_pidfd_open 434
