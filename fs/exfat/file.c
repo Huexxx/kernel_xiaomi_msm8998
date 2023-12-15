@@ -303,17 +303,17 @@ int exfat_setattr(struct dentry *dentry, struct iattr *attr)
 				ATTR_TIMES_SET);
 	}
 
-#if ((LINUX_VERSION_CODE < KERNEL_VERSION(4, 2, 0)) && \
+/*#if ((LINUX_VERSION_CODE < KERNEL_VERSION(4, 2, 0)) && \
 		(LINUX_VERSION_CODE >= KERNEL_VERSION(4, 1, 37))) || \
 		(LINUX_VERSION_CODE >= KERNEL_VERSION(4, 9, 0))
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 12, 0)
 	error = setattr_prepare(&init_user_ns, dentry, attr);
-#else
+#else*/
 	error = setattr_prepare(dentry, attr);
-#endif
+/*#endif
 #else
 	error = inode_change_ok(inode, attr);
-#endif
+#endif*/
 	attr->ia_valid = ia_valid;
 	if (error)
 		goto out;
