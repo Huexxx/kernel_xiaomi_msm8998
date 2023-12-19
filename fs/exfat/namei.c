@@ -96,11 +96,11 @@ static int exfat_d_hash(const struct dentry *dentry, struct qstr *qstr)
 	const unsigned char *name = qstr->name;
 	unsigned int len = exfat_striptail_len(qstr->len, qstr->name,
 			EXFAT_SB(sb)->options.keep_last_dots);
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 8, 0)
+//#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 8, 0)
 	unsigned long hash = init_name_hash(dentry);
-#else
+/*#else
 	unsigned long hash = init_name_hash();
-#endif
+#endif*/
 	int i, charlen;
 	wchar_t c;
 
@@ -161,11 +161,11 @@ static int exfat_utf8_d_hash(const struct dentry *dentry, struct qstr *qstr)
 	const unsigned char *name = qstr->name;
 	unsigned int len = exfat_striptail_len(qstr->len, qstr->name,
 			EXFAT_SB(sb)->options.keep_last_dots);
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 8, 0)
+//#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 8, 0)
 	unsigned long hash = init_name_hash(dentry);
-#else
+/*#else
 	unsigned long hash = init_name_hash();
-#endif
+#endif*/
 	int i, charlen;
 	unicode_t u;
 
