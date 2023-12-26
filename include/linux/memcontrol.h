@@ -167,11 +167,6 @@ struct mem_cgroup_thresholds {
 	struct mem_cgroup_threshold_ary *spare;
 };
 
-struct mem_cgroup_id {
-	int id;
-	atomic_t ref;
-};
-
 enum memcg_kmem_state {
 	KMEM_NONE,
 	KMEM_ALLOCATED,
@@ -186,9 +181,6 @@ enum memcg_kmem_state {
  */
 struct mem_cgroup {
 	struct cgroup_subsys_state css;
-
-	/* Private memcg ID. Used to ID objects that outlive the cgroup */
-	struct mem_cgroup_id id;
 
 	/* Accounted resources */
 	struct page_counter memory;
