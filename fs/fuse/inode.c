@@ -939,6 +939,7 @@ static void process_init_reply(struct fuse_conn *fc, struct fuse_req *req)
 				/* Prevent further stacking */
 				fc->sb->s_stack_depth =
 					FILESYSTEM_MAX_STACK_DEPTH;
+			}
 		} else {
 			ra_pages = fc->max_read / PAGE_SIZE;
 			fc->no_lock = 1;
