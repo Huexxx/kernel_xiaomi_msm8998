@@ -649,9 +649,6 @@ struct fuse_conn {
 	/** Does the filesystem support asynchronous direct-IO submission? */
 	unsigned async_dio:1;
 
-	/** Passthrough mode for read/write IO */
-	unsigned int passthrough:1;
-
 	/** Is lseek not implemented by fs? */
 	unsigned no_lseek:1;
 
@@ -663,6 +660,9 @@ struct fuse_conn {
 
 	/** Allow other than the mounter user to access the filesystem ? */
 	unsigned allow_other:1;
+
+	/** Passthrough mode for read/write IO */
+	unsigned int passthrough:1;
 
 	/** The number of requests waiting for completion */
 	atomic_t num_waiting;
