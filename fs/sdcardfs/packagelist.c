@@ -45,9 +45,9 @@ static DEFINE_HASHTABLE(ext_to_groupid, 8);
 
 static struct kmem_cache *hashtable_entry_cachep;
 
-static unsigned int full_name_case_hash(const unsigned char *name, unsigned int len)
+static unsigned int full_name_case_hash(const void *salt, const unsigned char *name, unsigned int len)
 {
-	unsigned long hash = init_name_hash();
+	unsigned long hash = init_name_hash(salt);
 
 	while (len--)
 		hash = partial_name_hash(tolower(*name++), hash);
@@ -58,7 +58,7 @@ static inline void qstr_init(struct qstr *q, const char *name)
 {
 	q->name = name;
 	q->len = strlen(q->name);
-	q->hash = full_name_case_hash(q->name, q->len);
+	q->hash = full_name_case_hash(0, q->name, q->len);
 }
 
 static inline int qstr_copy(const struct qstr *src, struct qstr *dest)
