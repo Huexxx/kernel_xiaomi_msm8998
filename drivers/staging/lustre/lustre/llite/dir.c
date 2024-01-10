@@ -276,7 +276,7 @@ static struct page *ll_dir_page_locate(struct inode *dir, __u64 *hash,
 	spin_lock_irq(&mapping->tree_lock);
 	found = radix_tree_gang_lookup(&mapping->page_tree,
 				       (void **)&page, offset, 1);
-	if (found > 0 && !radix_tree_exceptional_entry(page)) {
+	if (found > 0 && !xa_is_value(page)) {
 		struct lu_dirpage *dp;
 
 		get_page(page);
