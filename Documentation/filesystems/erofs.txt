@@ -1,3 +1,7 @@
+======================================
+Enhanced Read-Only File System - EROFS
+======================================
+
 Overview
 ========
 
@@ -6,6 +10,7 @@ from other read-only file systems, it aims to be designed for flexibility,
 scalability, but be kept simple and high performance.
 
 It is designed as a better filesystem solution for the following scenarios:
+
  - read-only storage media or
 
  - part of a fully trusted read-only solution, which means it needs to be
@@ -17,6 +22,7 @@ It is designed as a better filesystem solution for the following scenarios:
    for those embedded devices with limited memory (ex, smartphone);
 
 Here is the main features of EROFS:
+
  - Little endian on-disk design;
 
  - Currently 4KB block size (nobh) and therefore maximum 16TB address space;
@@ -24,13 +30,17 @@ Here is the main features of EROFS:
  - Metadata & data could be mixed by design;
 
  - 2 inode versions for different requirements:
+
+   =====================  ============  =====================================
                           compact (v1)  extended (v2)
-   Inode metadata size:   32 bytes      64 bytes
-   Max file size:         4 GB          16 EB (also limited by max. vol size)
-   Max uids/gids:         65536         4294967296
-   File change time:      no            yes (64 + 32-bit timestamp)
-   Max hardlinks:         65536         4294967296
-   Metadata reserved:     4 bytes       14 bytes
+   =====================  ============  =====================================
+   Inode metadata size    32 bytes      64 bytes
+   Max file size          4 GB          16 EB (also limited by max. vol size)
+   Max uids/gids          65536         4294967296
+   File change time       no            yes (64 + 32-bit timestamp)
+   Max hardlinks          65536         4294967296
+   Metadata reserved      4 bytes       14 bytes
+   =====================  ============  =====================================
 
  - Support extended attributes (xattrs) as an option;
 
@@ -43,29 +53,39 @@ Here is the main features of EROFS:
 
 The following git tree provides the file system user-space tools under
 development (ex, formatting tool mkfs.erofs):
->> git://git.kernel.org/pub/scm/linux/kernel/git/xiang/erofs-utils.git
+
+- git://git.kernel.org/pub/scm/linux/kernel/git/xiang/erofs-utils.git
 
 Bugs and patches are welcome, please kindly help us and send to the following
 linux-erofs mailing list:
->> linux-erofs mailing list   <linux-erofs@lists.ozlabs.org>
+
+- linux-erofs mailing list   <linux-erofs@lists.ozlabs.org>
 
 Mount options
 =============
 
+===================    =========================================================
 (no)user_xattr         Setup Extended User Attributes. Note: xattr is enabled
                        by default if CONFIG_EROFS_FS_XATTR is selected.
 (no)acl                Setup POSIX Access Control List. Note: acl is enabled
                        by default if CONFIG_EROFS_FS_POSIX_ACL is selected.
 cache_strategy=%s      Select a strategy for cached decompression from now on:
-                         disabled: In-place I/O decompression only;
-                        readahead: Cache the last incomplete compressed physical
+
+		       ==========  =============================================
+                         disabled  In-place I/O decompression only;
+                        readahead  Cache the last incomplete compressed physical
                                    cluster for further reading. It still does
                                    in-place I/O decompression for the rest
                                    compressed physical clusters;
-                       readaround: Cache the both ends of incomplete compressed
+                       readaround  Cache the both ends of incomplete compressed
                                    physical clusters for further reading.
                                    It still does in-place I/O decompression
                                    for the rest compressed physical clusters.
+		       ==========  =============================================
+dax={always,never}     Use direct access (no page cache).  See
+                       Documentation/filesystems/dax.rst.
+dax                    A legacy option which is an alias for ``dax=always``.
+===================    =========================================================
 
 On-disk details
 ===============
@@ -83,12 +103,15 @@ to be as simple as possible:
 
 All data areas should be aligned with the block size, but metadata areas
 may not. All metadatas can be now observed in two different spaces (views):
+
  1. Inode metadata space
+
     Each valid inode should be aligned with an inode slot, which is a fixed
     value (32 bytes) and designed to be kept in line with compact inode size.
 
     Each inode can be directly found with the following formula:
          inode offset = meta_blkaddr * block_size + 32 * nid
+
 
                                  |-> aligned with 8B
                                             |-> followed closely
@@ -132,23 +155,27 @@ may not. All metadatas can be now observed in two different spaces (views):
     proper alignment, and they could be optional for different data mappings.
     _currently_ total 5 data layouts are supported:
 
+    ==  ====================================================================
      0  flat file data without data inline (no extent);
      1  fixed-sized output data compression (with non-compacted indexes);
      2  flat file data with tail packing data inline (no extent);
      3  fixed-sized output data compression (with compacted indexes, v5.3+);
      4  chunk-based file (v5.15+).
+    ==  ====================================================================
 
     The size of the optional xattrs is indicated by i_xattr_count in inode
     header. Large xattrs or xattrs shared by many different files can be
     stored in shared xattrs metadata rather than inlined right after inode.
 
  2. Shared xattrs metadata space
+
     Shared xattrs space is similar to the above inode space, started with
     a specific block indicated by xattr_blkaddr, organized one by one with
     proper align.
 
     Each share xattr can also be directly found by the following formula:
          xattr offset = xattr_blkaddr * block_size + 4 * xattr_id
+
 
                            |-> aligned by  4 bytes
     + xattr_blkaddr blocks                     |-> aligned with 4 bytes
@@ -163,6 +190,7 @@ each directory block is divided into index and name areas in order to support
 random file lookup, and all directory entries are _strictly_ recorded in
 alphabetical order in order to support improved prefix binary search
 algorithm (could refer to the related source code).
+
 
                   ___________________________
                  /                           |
