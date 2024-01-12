@@ -13,7 +13,7 @@ static void erofs_readendio(struct bio *bio)
 {
 	int i;
 	struct bio_vec *bvec;
-	blk_status_t err = bio->bi_status;
+	int err = bio->bi_error;
 
 	bio_for_each_segment_all(bvec, bio, i) {
 		struct page *page = bvec->bv_page;
@@ -331,7 +331,7 @@ submit_bio_retry:
 		bio = bio_alloc(GFP_NOIO, nblocks);
 
 		bio->bi_end_io = erofs_readendio;
-		bio_set_dev(bio, sb->s_bdev);
+		bio->bi_bdev = sb->s_bdev;
 		bio->bi_iter.bi_sector = (sector_t)blknr <<
 			(sb->s_blocksize_bits - 9);
 		bio->bi_opf = REQ_OP_READ | (ra ? REQ_RAHEAD : 0);

@@ -661,7 +661,10 @@ static int z_erofs_fill_inode_lazy(struct inode *inode)
 out_put_metabuf:
 	erofs_put_metabuf(&buf);
 out_unlock:
-	clear_and_wake_up_bit(EROFS_I_BL_Z_BIT, &vi->flags);
+	clear_bit_unlock(EROFS_I_BL_Z_BIT, &vi->flags);
+	/* See wake_up_bit() for which memory barrier you need to use. */
+	smp_mb__after_atomic();
+	wake_up_bit(&vi->flags, EROFS_I_BL_Z_BIT);
 	return err;
 }
 
