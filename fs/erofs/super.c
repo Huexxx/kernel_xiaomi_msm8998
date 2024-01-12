@@ -531,7 +531,7 @@ static struct dentry *erofs_get_parent(struct dentry *child)
 	err = erofs_namei(d_inode(child), &dotdot_name, &nid, &d_type);
 	if (err)
 		return ERR_PTR(err);
-	return d_obtain_alias(erofs_iget(child->d_sb, nid, d_type == FT_DIR));
+	return d_obtain_alias(erofs_iget(child->d_sb, nid, d_type == EROFS_FT_DIR));
 }
 
 static const struct export_operations erofs_export_ops = {
@@ -586,9 +586,9 @@ static int erofs_fill_super(struct super_block *sb, void *data, int silent)
 		return err;
 
 	if (test_opt(&sbi->opt, POSIX_ACL))
-		sb->s_flags |= SB_POSIXACL;
+		sb->s_flags |= MS_POSIXACL;
 	else
-		sb->s_flags &= ~SB_POSIXACL;
+		sb->s_flags &= ~MS_POSIXACL;
 
 #ifdef CONFIG_EROFS_FS_ZIP
 	xa_init(&sbi->managed_pslots);
@@ -791,15 +791,15 @@ static int erofs_remount(struct super_block *sb, int *flags, char *data)
 	unsigned int org_mnt_opt = sbi->opt.mount_opt;
 	int err;
 
-	DBG_BUGON(!sb_rdonly(sb));
+	DBG_BUGON(!(sb->s_flags & MS_RDONLY));
 	err = erofs_parse_options(sb, data);
 	if (err)
 		goto out;
 
 	if (test_opt(&sbi->opt, POSIX_ACL))
-		sb->s_flags |= SB_POSIXACL;
+		sb->s_flags |= MS_POSIXACL;
 	else
-		sb->s_flags &= ~SB_POSIXACL;
+		sb->s_flags &= ~MS_POSIXACL;
 
 	*flags |= MS_RDONLY;
 	return 0;

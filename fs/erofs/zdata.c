@@ -6,6 +6,7 @@
  */
 #include "compress.h"
 #include <linux/overflow.h>
+
 #include <trace/events/erofs.h>
 
 #define Z_EROFS_PCLUSTER_MAX_PAGES	(Z_EROFS_PCLUSTER_MAX_SIZE / PAGE_SIZE)
@@ -189,7 +190,7 @@ struct z_erofs_bvec_iter {
 static struct page *z_erofs_bvec_iter_end(struct z_erofs_bvec_iter *iter)
 {
 	if (iter->bvpage)
-		kunmap_local(iter->bvset);
+		kunmap_atomic(iter->bvset);
 	return iter->bvpage;
 }
 
@@ -203,7 +204,7 @@ static struct page *z_erofs_bvset_flip(struct z_erofs_bvec_iter *iter)
 	DBG_BUGON(!nextpage);
 	oldpage = z_erofs_bvec_iter_end(iter);
 	iter->bvpage = nextpage;
-	iter->bvset = kmap_local_page(nextpage);
+	iter->bvset = kmap_atomic(nextpage);
 	iter->nr = (PAGE_SIZE - base) / sizeof(struct z_erofs_bvec);
 	iter->cur = 0;
 	return oldpage;
@@ -936,7 +937,7 @@ static void z_erofs_fill_other_copies(struct z_erofs_decompress_backend *be,
 		cur = bvi->bvec.offset < 0 ? -bvi->bvec.offset : 0;
 		end = min_t(unsigned int, be->pcl->length - bvi->bvec.offset,
 			    bvi->bvec.end);
-		dst = kmap_local_page(bvi->bvec.page);
+		dst = kmap_atomic(bvi->bvec.page);
 		while (cur < end) {
 			unsigned int pgnr, scur, len;
 
@@ -951,12 +952,12 @@ static void z_erofs_fill_other_copies(struct z_erofs_decompress_backend *be,
 				cur += len;
 				continue;
 			}
-			src = kmap_local_page(be->decompressed_pages[pgnr]);
+			src = kmap_atomic(be->decompressed_pages[pgnr]);
 			memcpy(dst + cur, src + scur, len);
-			kunmap_local(src);
+			kunmap_atomic(src);
 			cur += len;
 		}
-		kunmap_local(dst);
+		kunmap_atomic(dst);
 		z_erofs_onlinepage_endio(bvi->bvec.page, err);
 		list_del(p);
 		kfree(bvi);
@@ -1062,11 +1063,11 @@ static int z_erofs_decompress_pcluster(struct z_erofs_decompress_backend *be,
 
 	if (!be->decompressed_pages)
 		be->decompressed_pages =
-			kvcalloc(be->nr_pages, sizeof(struct page *),
+			kcalloc(be->nr_pages, sizeof(struct page *),
 				 GFP_KERNEL | __GFP_NOFAIL);
 	if (!be->compressed_pages)
 		be->compressed_pages =
-			kvcalloc(pclusterpages, sizeof(struct page *),
+			kcalloc(pclusterpages, sizeof(struct page *),
 				 GFP_KERNEL | __GFP_NOFAIL);
 
 	z_erofs_parse_out_bvecs(be);
@@ -1115,7 +1116,7 @@ out:
 	}
 	if (be->compressed_pages < be->onstack_pages ||
 	    be->compressed_pages >= be->onstack_pages + Z_EROFS_ONSTACK_PAGES)
-		kvfree(be->compressed_pages);
+		kfree(be->compressed_pages);
 	z_erofs_fill_other_copies(be, err);
 
 	for (i = 0; i < be->nr_pages; ++i) {
@@ -1132,7 +1133,7 @@ out:
 	}
 
 	if (be->decompressed_pages != be->onstack_pages)
-		kvfree(be->decompressed_pages);
+		kfree(be->decompressed_pages);
 
 	pcl->length = 0;
 	pcl->partial = true;
@@ -1368,7 +1369,7 @@ static void move_to_bypass_jobqueue(struct z_erofs_pcluster *pcl,
 static void z_erofs_decompressqueue_endio(struct bio *bio)
 {
 	struct z_erofs_decompressqueue *q = bio->bi_private;
-	blk_status_t err = bio->bi_status;
+	int err = bio->bi_error;
 	unsigned int i;
 	struct bio_vec *bvec;
 
@@ -1453,7 +1454,7 @@ submit_bio_retry:
 				bio = bio_alloc(GFP_NOIO, BIO_MAX_PAGES);
 
 				bio->bi_end_io = z_erofs_decompressqueue_endio;
-				bio_set_dev(bio, sb->s_bdev);
+				bio->bi_bdev = sb->s_bdev;
 				bio->bi_iter.bi_sector = (sector_t)cur <<
 					(sb->s_blocksize_bits - 9);
 				bio->bi_private = q[JQ_SUBMIT];

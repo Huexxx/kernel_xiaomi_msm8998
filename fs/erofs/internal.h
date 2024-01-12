@@ -313,8 +313,8 @@ void erofs_init_metabuf(struct erofs_buf *buf, struct super_block *sb);
 void *erofs_read_metabuf(struct erofs_buf *buf, struct super_block *sb,
 			 erofs_blk_t blkaddr, enum erofs_kmap_type type);
 struct inode *erofs_iget(struct super_block *sb, erofs_nid_t nid, bool dir);
-int erofs_getattr(const struct path *path, struct kstat *stat,
-		  u32 request_mask, unsigned int query_flags);
+int erofs_getattr(struct vfsmount *mnt, struct dentry *dentry,
+		  struct kstat *stat);
 int erofs_namei(struct inode *dir, const struct qstr *name,
 		erofs_nid_t *nid, unsigned int *d_type);
 

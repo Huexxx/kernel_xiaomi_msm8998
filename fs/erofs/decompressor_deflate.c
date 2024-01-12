@@ -109,12 +109,12 @@ int z_erofs_deflate_decompress(struct z_erofs_decompress_req *rq,
 	int no = -1, ni = 0, j = 0, zerr, err;
 
 	/* 1. get the exact DEFLATE compressed size */
-	kin = kmap_local_page(*rq->in);
+	kin = kmap_atomic(*rq->in);
 	err = z_erofs_fixup_insize(rq, kin + rq->pageofs_in,
 			min_t(unsigned int, rq->inputsize,
 			      sb->s_blocksize - rq->pageofs_in));
 	if (err) {
-		kunmap_local(kin);
+		kunmap_atomic(kin);
 		return err;
 	}
 
@@ -154,7 +154,7 @@ again:
 			}
 
 			if (kout)
-				kunmap_local(kout);
+				kunmap_atomic(kout);
 			strm->z.avail_out = min_t(u32, outsz, PAGE_SIZE - pofs);
 			outsz -= strm->z.avail_out;
 			if (!rq->out[no]) {
@@ -163,7 +163,7 @@ again:
 				set_page_private(rq->out[no],
 						 Z_EROFS_SHORTLIVED_PAGE);
 			}
-			kout = kmap_local_page(rq->out[no]);
+			kout = kmap_atomic(rq->out[no]);
 			strm->z.next_out = kout + pofs;
 			pofs = 0;
 		}
@@ -177,16 +177,16 @@ again:
 
 			if (kout) { /* unlike kmap(), take care of the orders */
 				j = strm->z.next_out - kout;
-				kunmap_local(kout);
+				kunmap_atomic(kout);
 			}
-			kunmap_local(kin);
+			kunmap_atomic(kin);
 			strm->z.avail_in = min_t(u32, insz, PAGE_SIZE);
 			insz -= strm->z.avail_in;
-			kin = kmap_local_page(rq->in[ni]);
+			kin = kmap_atomic(rq->in[ni]);
 			strm->z.next_in = kin;
 			bounced = false;
 			if (kout) {
-				kout = kmap_local_page(rq->out[no]);
+				kout = kmap_atomic(rq->out[no]);
 				strm->z.next_out = kout + j;
 			}
 		}
@@ -234,9 +234,9 @@ again:
 	if (zlib_inflateEnd(&strm->z) != Z_OK && !err)
 		err = -EIO;
 	if (kout)
-		kunmap_local(kout);
+		kunmap_atomic(kout);
 failed_zinit:
-	kunmap_local(kin);
+	kunmap_atomic(kin);
 	/* 4. push back DEFLATE stream context to the global list */
 	spin_lock(&z_erofs_deflate_lock);
 	strm->next = z_erofs_deflate_head;

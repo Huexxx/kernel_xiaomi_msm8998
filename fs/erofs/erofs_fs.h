@@ -387,6 +387,19 @@ struct z_erofs_lcluster_index {
 #define Z_EROFS_FULL_INDEX_ALIGN(end)	\
 	(ALIGN(end, 8) + sizeof(struct z_erofs_map_header) + 8)
 
+ /* file types used in inode_info->flags */
+ enum {
+ 	EROFS_FT_UNKNOWN,
+ 	EROFS_FT_REG_FILE,
+ 	EROFS_FT_DIR,
+ 	EROFS_FT_CHRDEV,
+ 	EROFS_FT_BLKDEV,
+ 	EROFS_FT_FIFO,
+ 	EROFS_FT_SOCK,
+ 	EROFS_FT_SYMLINK,
+ 	EROFS_FT_MAX
+ };
+
 /* check the EROFS on-disk layout strictly at compile time */
 static inline void erofs_check_ondisk_layout_definitions(void)
 {

@@ -65,7 +65,6 @@ static struct attribute *erofs_attrs[] = {
 #endif
 	NULL,
 };
-ATTRIBUTE_GROUPS(erofs);
 
 /* Features this copy of erofs supports */
 EROFS_ATTR_FEATURE(zero_padding);
@@ -88,7 +87,6 @@ static struct attribute *erofs_feat_attrs[] = {
 	ATTR_LIST(dedupe),
 	NULL,
 };
-ATTRIBUTE_GROUPS(erofs_feat);
 
 static unsigned char *__struct_ptr(struct erofs_sb_info *sbi,
 					  int struct_type, int offset)
@@ -176,7 +174,7 @@ static const struct sysfs_ops erofs_attr_ops = {
 };
 
 static struct kobj_type erofs_sb_ktype = {
-	.default_groups = erofs_groups,
+	.default_attrs	= erofs_attrs,
 	.sysfs_ops	= &erofs_attr_ops,
 	.release	= erofs_sb_release,
 };
@@ -190,7 +188,7 @@ static struct kset erofs_root = {
 };
 
 static struct kobj_type erofs_feat_ktype = {
-	.default_groups = erofs_feat_groups,
+	.default_attrs	= erofs_feat_attrs,
 	.sysfs_ops	= &erofs_attr_ops,
 };
 

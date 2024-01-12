@@ -6,6 +6,17 @@
  */
 #include "internal.h"
 
+ static const unsigned char erofs_filetype_table[EROFS_FT_MAX] = {
+ 	[EROFS_FT_UNKNOWN]	= DT_UNKNOWN,
+ 	[EROFS_FT_REG_FILE]	= DT_REG,
+ 	[EROFS_FT_DIR]		= DT_DIR,
+ 	[EROFS_FT_CHRDEV]	= DT_CHR,
+ 	[EROFS_FT_BLKDEV]	= DT_BLK,
+ 	[EROFS_FT_FIFO]		= DT_FIFO,
+ 	[EROFS_FT_SOCK]		= DT_SOCK,
+ 	[EROFS_FT_SYMLINK]	= DT_LNK,
+ };
+
 static int erofs_fill_dentries(struct inode *dir, struct dir_context *ctx,
 			       void *dentry_blk, struct erofs_dirent *de,
 			       unsigned int nameoff, unsigned int maxsize)
@@ -17,7 +28,10 @@ static int erofs_fill_dentries(struct inode *dir, struct dir_context *ctx,
 		unsigned int de_namelen;
 		unsigned char d_type;
 
-		d_type = fs_ftype_to_dtype(de->file_type);
+ 		if (de->file_type < EROFS_FT_MAX)
+ 			d_type = erofs_filetype_table[de->file_type];
+ 		else
+ 			d_type = DT_UNKNOWN;
 
 		nameoff = le16_to_cpu(de->nameoff);
 		de_name = (char *)dentry_blk + nameoff;

@@ -211,7 +211,7 @@ static struct dentry *erofs_lookup(struct inode *dir, struct dentry *dentry,
 	else if (err)
 		inode = ERR_PTR(err);
 	else
-		inode = erofs_iget(dir->i_sb, nid, d_type == FT_DIR);
+		inode = erofs_iget(dir->i_sb, nid, d_type == EROFS_FT_DIR);
 	return d_splice_alias(inode, dentry);
 }
 
