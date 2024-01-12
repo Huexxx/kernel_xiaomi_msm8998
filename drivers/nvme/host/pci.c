@@ -82,6 +82,9 @@ MODULE_PARM_DESC(use_cmb_sqes, "use controller's memory buffer for I/O SQes");
 
 static DEFINE_SPINLOCK(dev_list_lock);
 static LIST_HEAD(dev_list);
+
+static DEFINE_IDA(nvme_instance_ida);
+
 static struct task_struct *nvme_thread;
 static struct workqueue_struct *nvme_workq;
 static wait_queue_head_t nvme_kthread_wait;
@@ -3027,42 +3030,13 @@ static void nvme_release_prp_pools(struct nvme_dev *dev)
 	dma_pool_destroy(dev->prp_small_pool);
 }
 
-static DEFINE_IDA(nvme_instance_ida);
-
-static int nvme_set_instance(struct nvme_dev *dev)
-{
-	int instance, error;
-
-	do {
-		if (!ida_pre_get(&nvme_instance_ida, GFP_KERNEL))
-			return -ENODEV;
-
-		spin_lock(&dev_list_lock);
-		error = ida_get_new(&nvme_instance_ida, &instance);
-		spin_unlock(&dev_list_lock);
-	} while (error == -EAGAIN);
-
-	if (error)
-		return -ENODEV;
-
-	dev->instance = instance;
-	return 0;
-}
-
-static void nvme_release_instance(struct nvme_dev *dev)
-{
-	spin_lock(&dev_list_lock);
-	ida_remove(&nvme_instance_ida, dev->instance);
-	spin_unlock(&dev_list_lock);
-}
-
 static void nvme_free_dev(struct kref *kref)
 {
 	struct nvme_dev *dev = container_of(kref, struct nvme_dev, kref);
 
 	put_device(dev->dev);
 	put_device(dev->device);
-	nvme_release_instance(dev);
+	ida_simple_remove(&nvme_instance_ida, dev->instance);
 	if (dev->tagset.tags)
 		blk_mq_free_tag_set(&dev->tagset);
 	if (dev->admin_q)
@@ -3348,9 +3322,10 @@ static int nvme_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	if (result)
 		goto free;
 
-	result = nvme_set_instance(dev);
-	if (result)
+	result = ida_simple_get(&nvme_instance_ida, 0, 0, GFP_KERNEL);
+	if (result < 0)
 		goto put_pci;
+	dev->instance = result;
 
 	result = nvme_setup_prp_pools(dev);
 	if (result)
@@ -3383,7 +3358,7 @@ static int nvme_probe(struct pci_dev *pdev, const struct pci_device_id *id)
  release_pools:
 	nvme_release_prp_pools(dev);
  release:
-	nvme_release_instance(dev);
+	ida_simple_remove(&nvme_instance_ida, dev->instance);
  put_pci:
 	put_device(dev->dev);
 	nvme_dev_unmap(dev);
