@@ -1993,7 +1993,7 @@ int __dquot_transfer(struct inode *inode, struct dquot **transfer_to)
 				      DQUOT_SPACE_WARN, &warn_to[cnt]);
 		if (ret) {
 			spin_lock(&transfer_to[cnt]->dq_dqb_lock);
-			dquot_decr_inodes(transfer_to[cnt], inode_usage);
+			dquot_decr_inodes(transfer_to[cnt], 1);
 			spin_unlock(&transfer_to[cnt]->dq_dqb_lock);
 			goto over_quota;
 		}
@@ -2043,7 +2043,7 @@ over_quota:
 		if (!is_valid[cnt])
 			continue;
 		spin_lock(&transfer_to[cnt]->dq_dqb_lock);
-		dquot_decr_inodes(transfer_to[cnt], inode_usage);
+		dquot_decr_inodes(transfer_to[cnt], 1);
 		dquot_decr_space(transfer_to[cnt], cur_space);
 		dquot_free_reserved_space(transfer_to[cnt], rsv_space);
 		spin_unlock(&transfer_to[cnt]->dq_dqb_lock);
