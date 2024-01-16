@@ -2297,13 +2297,11 @@ static int f2fs_dquot_commit_info(struct super_block *sb, int type)
 	return ret;
 }
 
-#if 0
 static int f2fs_get_projid(struct inode *inode, kprojid_t *projid)
 {
 	*projid = F2FS_I(inode)->i_projid;
 	return 0;
 }
-#endif
 
 static const struct dquot_operations f2fs_quota_operations = {
 	.get_reserved_space = f2fs_get_reserved_space,
@@ -2314,10 +2312,8 @@ static const struct dquot_operations f2fs_quota_operations = {
 	.write_info	= f2fs_dquot_commit_info,
 	.alloc_dquot	= dquot_alloc,
 	.destroy_dquot	= dquot_destroy,
-#if 0
 	.get_projid	= f2fs_get_projid,
 	.get_next_id	= dquot_get_next_id,
-#endif
 };
 
 static const struct quotactl_ops f2fs_quotactl_ops = {
