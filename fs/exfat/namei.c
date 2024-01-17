@@ -115,13 +115,13 @@ static int exfat_d_hash(const struct dentry *dentry, struct qstr *qstr)
 	return 0;
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 8, 0)
+//#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 8, 0)
 static int exfat_d_cmp(const struct dentry *dentry, unsigned int len,
 		const char *str, const struct qstr *name)
-#else
+/*#else
 static int exfat_d_cmp(const struct dentry *parent, const struct dentry *dentry,
 		unsigned int len, const char *str, const struct qstr *name)
-#endif
+#endif*/
 {
 	struct super_block *sb = dentry->d_sb;
 	struct nls_table *t = EXFAT_SB(sb)->nls_io;
@@ -185,14 +185,14 @@ static int exfat_utf8_d_hash(const struct dentry *dentry, struct qstr *qstr)
 	return 0;
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 8, 0)
+//#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 8, 0)
 static int exfat_utf8_d_cmp(const struct dentry *dentry, unsigned int len,
 		const char *str, const struct qstr *name)
-#else
+/*#else
 static int exfat_utf8_d_cmp(const struct dentry *parent,
 		const struct dentry *dentry, unsigned int len,
 		const char *str, const struct qstr *name)
-#endif
+#endif*/
 {
 	struct super_block *sb = dentry->d_sb;
 	unsigned int alen = exfat_striptail_len(name->len, name->name,
