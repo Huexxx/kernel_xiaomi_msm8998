@@ -1124,12 +1124,16 @@ static int kernfs_iop_rmdir(struct inode *dir, struct dentry *dentry)
 }
 
 static int kernfs_iop_rename(struct inode *old_dir, struct dentry *old_dentry,
-			     struct inode *new_dir, struct dentry *new_dentry)
+			     struct inode *new_dir, struct dentry *new_dentry,
+			     unsigned int flags)
 {
 	struct kernfs_node *kn = kernfs_dentry_node(old_dentry);
 	struct kernfs_node *new_parent = new_dir->i_private;
 	struct kernfs_syscall_ops *scops = kernfs_root(kn)->syscall_ops;
 	int ret;
+
+	if (flags & ~RENAME_NOREPLACE)
+		return -EINVAL;
 
 	if (!scops || !scops->rename)
 		return -EPERM;
