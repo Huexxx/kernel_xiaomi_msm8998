@@ -188,17 +188,17 @@ static int fuse_xattr_get(const struct xattr_handler *handler,
 }
 
 static int fuse_xattr_set(const struct xattr_handler *handler,
-			  struct dentry *dentry, const char *name,
-			  const void *value, size_t size,
-			  int flags)
+			  struct dentry *unused, struct inode *inode,
+			  const char *name, const void *value,
+			  size_t size, int flags)
 {
-	if (fuse_is_bad(d_inode(dentry)))
+	if (fuse_is_bad(inode))
 		return -EIO;
 
 	if (!value)
-		return fuse_removexattr(d_inode(dentry), name);
+		return fuse_removexattr(inode, name);
 
-	return fuse_setxattr(d_inode(dentry), name, value, size, flags);
+	return fuse_setxattr(inode, name, value, size, flags);
 }
 
 static const struct xattr_handler fuse_xattr_handler = {
