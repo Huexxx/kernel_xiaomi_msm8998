@@ -31,7 +31,6 @@ struct ovl_config {
 	char *upperdir;
 	char *workdir;
 	bool default_permissions;
-	bool override_creds;
 };
 
 /* private information held for overlayfs's superblock */
@@ -272,15 +271,7 @@ const struct cred *ovl_override_creds(struct super_block *sb)
 {
 	struct ovl_fs *ofs = sb->s_fs_info;
 
-	if (!ofs->config.override_creds)
-		return NULL;
 	return override_creds(ofs->creator_cred);
-}
-
-void ovl_revert_creds(const struct cred *old_cred)
-{
-	if (old_cred)
-		revert_creds(old_cred);
 }
 
 static bool ovl_is_opaquedir(struct dentry *dentry)
@@ -660,11 +651,6 @@ static int ovl_statfs(struct dentry *dentry, struct kstatfs *buf)
 	return err;
 }
 
-static bool __read_mostly ovl_override_creds_def = true;
-module_param_named(override_creds, ovl_override_creds_def, bool, 0644);
-MODULE_PARM_DESC(ovl_override_creds_def,
-		 "Use mounter's credentials for accesses");
-
 /**
  * ovl_show_options
  *
@@ -683,9 +669,6 @@ static int ovl_show_options(struct seq_file *m, struct dentry *dentry)
 	}
 	if (ufs->config.default_permissions)
 		seq_puts(m, ",default_permissions");
-	if (ufs->config.override_creds != ovl_override_creds_def)
-		seq_show_option(m, "override_creds",
-				ufs->config.override_creds ? "on" : "off");
 	return 0;
 }
 
@@ -711,8 +694,6 @@ enum {
 	OPT_UPPERDIR,
 	OPT_WORKDIR,
 	OPT_DEFAULT_PERMISSIONS,
-	OPT_OVERRIDE_CREDS_ON,
-	OPT_OVERRIDE_CREDS_OFF,
 	OPT_ERR,
 };
 
@@ -721,8 +702,6 @@ static const match_table_t ovl_tokens = {
 	{OPT_UPPERDIR,			"upperdir=%s"},
 	{OPT_WORKDIR,			"workdir=%s"},
 	{OPT_DEFAULT_PERMISSIONS,	"default_permissions"},
-	{OPT_OVERRIDE_CREDS_ON,		"override_creds=on"},
-	{OPT_OVERRIDE_CREDS_OFF,	"override_creds=off"},
 	{OPT_ERR,			NULL}
 };
 
@@ -753,7 +732,6 @@ static int ovl_parse_opt(char *opt, struct ovl_config *config)
 {
 	char *p;
 
-	config->override_creds = ovl_override_creds_def;
 	while ((p = ovl_next_opt(&opt)) != NULL) {
 		int token;
 		substring_t args[MAX_OPT_ARGS];
@@ -786,14 +764,6 @@ static int ovl_parse_opt(char *opt, struct ovl_config *config)
 
 		case OPT_DEFAULT_PERMISSIONS:
 			config->default_permissions = true;
-			break;
-
-		case OPT_OVERRIDE_CREDS_ON:
-			config->override_creds = true;
-			break;
-
-		case OPT_OVERRIDE_CREDS_OFF:
-			config->override_creds = false;
 			break;
 
 		default:
