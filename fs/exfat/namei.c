@@ -1412,14 +1412,14 @@ static int exfat_rename(struct user_namespace *mnt_userns,
 			struct inode *new_dir, struct dentry *new_dentry,
 			unsigned int flags)
 #else
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 9, 0)
+//#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 9, 0)
 static int exfat_rename(struct inode *old_dir, struct dentry *old_dentry,
 		struct inode *new_dir, struct dentry *new_dentry,
 		unsigned int flags)
-#else
+/*#else
 static int exfat_rename(struct inode *old_dir, struct dentry *old_dentry,
 		struct inode *new_dir, struct dentry *new_dentry)
-#endif
+#endif*/
 #endif
 {
 	struct inode *old_inode, *new_inode;
@@ -1427,7 +1427,7 @@ static int exfat_rename(struct inode *old_dir, struct dentry *old_dentry,
 	loff_t i_pos;
 	int err;
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 0, 0)
+//#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 0, 0)
 	/*
 	 * The VFS already checks for existence, so for local filesystems
 	 * the RENAME_NOREPLACE implementation is equivalent to plain rename.
@@ -1435,7 +1435,7 @@ static int exfat_rename(struct inode *old_dir, struct dentry *old_dentry,
 	 */
 	if (flags & ~RENAME_NOREPLACE)
 		return -EINVAL;
-#endif
+//#endif
 
 	mutex_lock(&EXFAT_SB(sb)->s_lock);
 	old_inode = old_dentry->d_inode;
