@@ -803,6 +803,8 @@ __SYSCALL(__NR_userfaultfd, sys_userfaultfd)
 __SYSCALL(__NR_membarrier, sys_membarrier)
 #define __NR_mlock2 390
 __SYSCALL(__NR_mlock2, sys_mlock2)
+#define __NR_copy_file_range 391
+__SYSCALL(__NR_copy_file_range, sys_copy_file_range)
 #define __NR_preadv2 392
 __SYSCALL(__NR_preadv2, compat_sys_preadv2)
 #define __NR_pwritev2 393
