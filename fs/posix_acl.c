@@ -931,7 +931,7 @@ int simple_set_acl(struct inode *inode, struct posix_acl *acl, int type)
 			return error;
 	}
 
-	inode->i_ctime = CURRENT_TIME;
+	inode->i_ctime = current_time(inode);
 	set_cached_acl(inode, type, acl);
 	return 0;
 }
