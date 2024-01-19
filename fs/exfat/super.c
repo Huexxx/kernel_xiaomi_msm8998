@@ -639,13 +639,13 @@ static int exfat_read_root(struct inode *inode)
 	ei->i_size_ondisk = i_size_read(inode);
 
 	exfat_save_attr(inode, ATTR_SUBDIR);
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 10, 0)
+//#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 10, 0)
 	inode->i_mtime = inode->i_atime = inode->i_ctime = ei->i_crtime =
 		current_time(inode);
-#else
+/*#else
 	inode->i_mtime = inode->i_atime = inode->i_ctime = ei->i_crtime =
 		CURRENT_TIME_SEC;
-#endif
+#endif*/
 	exfat_truncate_atime(&inode->i_atime);
 	return 0;
 }

@@ -25,11 +25,11 @@ static int exfat_cont_expand(struct inode *inode, loff_t size)
 	if (err)
 		return err;
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 10, 0)
+//#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 10, 0)
 	inode->i_ctime = inode->i_mtime = current_time(inode);
-#else
+/*#else
 	inode->i_ctime = inode->i_mtime = CURRENT_TIME_SEC;
-#endif
+#endif*/
 	mark_inode_dirty(inode);
 
 	if (!IS_SYNC(inode))
@@ -338,11 +338,11 @@ int exfat_setattr(struct dentry *dentry, struct iattr *attr)
 	}
 
 	if (attr->ia_valid & ATTR_SIZE)
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 10, 0)
+//#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 10, 0)
 		inode->i_mtime = inode->i_ctime = current_time(inode);
-#else
+/*#else
 		inode->i_mtime = inode->i_ctime = CURRENT_TIME_SEC;
-#endif
+#endif*/
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 12, 0)
 	setattr_copy(&init_user_ns, inode, attr);

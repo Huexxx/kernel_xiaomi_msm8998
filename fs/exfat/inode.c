@@ -437,11 +437,11 @@ static int exfat_write_end(struct file *file, struct address_space *mapping,
 		exfat_write_failed(mapping, pos+len);
 
 	if (!(err < 0) && !(ei->attr & ATTR_ARCHIVE)) {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 10, 0)
+//#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 10, 0)
 		inode->i_mtime = inode->i_ctime = current_time(inode);
-#else
+/*#else
 		inode->i_mtime = inode->i_ctime = CURRENT_TIME_SEC;
-#endif
+#endif*/
 		ei->attr |= ATTR_ARCHIVE;
 		mark_inode_dirty(inode);
 	}
