@@ -51,7 +51,10 @@ static struct kernfs_iattrs *kernfs_iattrs(struct kernfs_node *kn)
 	iattrs->ia_mode = kn->mode;
 	iattrs->ia_uid = GLOBAL_ROOT_UID;
 	iattrs->ia_gid = GLOBAL_ROOT_GID;
-	iattrs->ia_atime = iattrs->ia_mtime = iattrs->ia_ctime = CURRENT_TIME;
+
+	ktime_get_real_ts(&iattrs->ia_atime);
+	iattrs->ia_mtime = iattrs->ia_atime;
+	iattrs->ia_ctime = iattrs->ia_atime;
 
 	simple_xattrs_init(&kn->iattr->xattrs);
 out_unlock:
@@ -164,7 +167,8 @@ ssize_t kernfs_iop_listxattr(struct dentry *dentry, char *buf, size_t size)
 static inline void set_default_inode_attr(struct inode *inode, umode_t mode)
 {
 	inode->i_mode = mode;
-	inode->i_atime = inode->i_mtime = inode->i_ctime = CURRENT_TIME;
+	inode->i_atime = inode->i_mtime =
+		inode->i_ctime = current_time(inode);
 }
 
 static inline void set_inode_attr(struct inode *inode, struct iattr *iattr)
