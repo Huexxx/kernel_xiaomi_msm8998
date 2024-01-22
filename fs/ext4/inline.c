@@ -1046,7 +1046,7 @@ static int ext4_add_dirent_to_inline(handle_t *handle,
 	err = ext4_journal_get_write_access(handle, iloc->bh);
 	if (err)
 		return err;
-	ext4_insert_dentry(dir, inode, de, inline_size, fname);
+	ext4_insert_dentry(inode, de, inline_size, fname);
 
 	ext4_show_inline_dir(dir, iloc->bh, inline_start, inline_size);
 
@@ -1366,7 +1366,7 @@ int htree_inlinedir_to_tree(struct file *dir_file,
 	struct ext4_iloc iloc;
 	void *dir_buf = NULL;
 	struct ext4_dir_entry_2 fake;
-	struct ext4_str tmp_str;
+	struct fscrypt_str tmp_str;
 
 	ret = ext4_get_inode_loc(inode, &iloc);
 	if (ret)
@@ -1780,7 +1780,7 @@ ext4_get_inline_entry(struct inode *inode,
 	return (struct ext4_dir_entry_2 *)(inline_pos + offset);
 }
 
-int empty_inline_dir(struct inode *dir, int *has_inline_data)
+bool empty_inline_dir(struct inode *dir, int *has_inline_data)
 {
 	int err, inline_size;
 	struct ext4_iloc iloc;
@@ -1788,13 +1788,13 @@ int empty_inline_dir(struct inode *dir, int *has_inline_data)
 	void *inline_pos;
 	unsigned int offset;
 	struct ext4_dir_entry_2 *de;
-	int ret = 1;
+	bool ret = true;
 
 	err = ext4_get_inode_loc(dir, &iloc);
 	if (err) {
 		EXT4_ERROR_INODE(dir, "error %d getting inode %lu block",
 				 err, dir->i_ino);
-		return 1;
+		return true;
 	}
 
 	down_read(&EXT4_I(dir)->xattr_sem);
@@ -1808,7 +1808,7 @@ int empty_inline_dir(struct inode *dir, int *has_inline_data)
 		ext4_warning(dir->i_sb,
 			     "bad inline directory (dir #%lu) - no `..'",
 			     dir->i_ino);
-		ret = 1;
+		ret = true;
 		goto out;
 	}
 
@@ -1827,11 +1827,11 @@ int empty_inline_dir(struct inode *dir, int *has_inline_data)
 				     dir->i_ino, le32_to_cpu(de->inode),
 				     le16_to_cpu(de->rec_len), de->name_len,
 				     inline_size);
-			ret = 1;
+			ret = true;
 			goto out;
 		}
 		if (le32_to_cpu(de->inode)) {
-			ret = 0;
+			ret = false;
 			goto out;
 		}
 		offset += ext4_rec_len_from_disk(de->rec_len, inline_size);

@@ -11,13 +11,21 @@
 #ifndef _FSCRYPT_PRIVATE_H
 #define _FSCRYPT_PRIVATE_H
 
-#define __FS_HAS_ENCRYPTION 1
 #include <linux/fscrypt.h>
 #include <crypto/hash.h>
+#include <linux/pfk.h>
 
 /* Encryption parameters */
 #define FS_IV_SIZE			16
-#define FS_KEY_DERIVATION_NONCE_SIZE	16
+#define FS_AES_128_ECB_KEY_SIZE		16
+#define FS_AES_128_CBC_KEY_SIZE		16
+#define FS_AES_128_CTS_KEY_SIZE		16
+#define FS_AES_256_GCM_KEY_SIZE		32
+#define FS_AES_256_CBC_KEY_SIZE		32
+#define FS_AES_256_CTS_KEY_SIZE		32
+#define FS_AES_256_XTS_KEY_SIZE		64
+
+#define FS_KEY_DERIVATION_NONCE_SIZE		16
 
 /**
  * Encryption context for inode
@@ -50,17 +58,25 @@ struct fscrypt_symlink_data {
 	char encrypted_path[1];
 } __packed;
 
+enum ci_mode_info {
+	CI_NONE_MODE = 0,
+	CI_DATA_MODE,
+	CI_FNAME_MODE,
+};
+
 /*
  * A pointer to this structure is stored in the file system's in-core
  * representation of an inode.
  */
 struct fscrypt_info {
+	u8 ci_mode;
 	u8 ci_data_mode;
 	u8 ci_filename_mode;
 	u8 ci_flags;
 	struct crypto_skcipher *ci_ctfm;
 	struct crypto_cipher *ci_essiv_tfm;
 	u8 ci_master_key[FS_KEY_DESCRIPTOR_SIZE];
+	u8 ci_raw_key[FS_MAX_KEY_SIZE];
 };
 
 typedef enum {
@@ -93,7 +109,17 @@ static inline bool fscrypt_valid_enc_modes(u32 contents_mode,
 	    filenames_mode == FS_ENCRYPTION_MODE_AES_256_CTS)
 		return true;
 
+	if (contents_mode == FS_ENCRYPTION_MODE_PRIVATE &&
+	    filenames_mode == FS_ENCRYPTION_MODE_AES_256_CTS)
+		return true;
+
 	return false;
+}
+
+static inline bool is_private_data_mode(struct fscrypt_info *ci)
+{
+	return ci->ci_mode == CI_DATA_MODE &&
+		ci->ci_data_mode == FS_ENCRYPTION_MODE_PRIVATE;
 }
 
 /* crypto.c */

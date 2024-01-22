@@ -15,6 +15,7 @@
 #include <crypto/sha.h>
 #include <crypto/skcipher.h>
 #include "fscrypt_private.h"
+#include "fscrypt_ice.h"
 
 static struct crypto_shash *essiv_hash_tfm;
 
@@ -173,6 +174,11 @@ static struct fscrypt_mode {
 		.cipher_str = "cts(cbc(aes))",
 		.keysize = 16,
 	},
+	[FS_ENCRYPTION_MODE_PRIVATE] = {
+		.friendly_name = "ICE",
+		.cipher_str = "bugon",
+		.keysize = 64,
+	},
 };
 
 static struct fscrypt_mode *
@@ -274,6 +280,12 @@ void __exit fscrypt_essiv_cleanup(void)
 	crypto_free_shash(essiv_hash_tfm);
 }
 
+static int fscrypt_data_encryption_mode(struct inode *inode)
+{
+	return fscrypt_is_ice_capable(inode->i_sb) ?
+	FS_ENCRYPTION_MODE_PRIVATE : FS_ENCRYPTION_MODE_AES_256_XTS;
+}
+
 int fscrypt_get_encryption_info(struct inode *inode)
 {
 	struct fscrypt_info *crypt_info;
@@ -298,7 +310,8 @@ int fscrypt_get_encryption_info(struct inode *inode)
 		/* Fake up a context for an unencrypted directory */
 		memset(&ctx, 0, sizeof(ctx));
 		ctx.format = FS_ENCRYPTION_CONTEXT_FORMAT_V1;
-		ctx.contents_encryption_mode = FS_ENCRYPTION_MODE_AES_256_XTS;
+		ctx.contents_encryption_mode =
+			fscrypt_data_encryption_mode(inode);
 		ctx.filenames_encryption_mode = FS_ENCRYPTION_MODE_AES_256_CTS;
 		memset(ctx.master_key_descriptor, 0x42, FS_KEY_DESCRIPTOR_SIZE);
 	} else if (res != sizeof(ctx)) {
@@ -390,19 +403,9 @@ out:
 }
 EXPORT_SYMBOL(fscrypt_get_encryption_info);
 
-void fscrypt_put_encryption_info(struct inode *inode, struct fscrypt_info *ci)
+void fscrypt_put_encryption_info(struct inode *inode)
 {
-	struct fscrypt_info *prev;
-
-	if (ci == NULL)
-		ci = ACCESS_ONCE(inode->i_crypt_info);
-	if (ci == NULL)
-		return;
-
-	prev = cmpxchg(&inode->i_crypt_info, ci, NULL);
-	if (prev != ci)
-		return;
-
-	put_crypt_info(ci);
+	put_crypt_info(inode->i_crypt_info);
+	inode->i_crypt_info = NULL;
 }
 EXPORT_SYMBOL(fscrypt_put_encryption_info);
