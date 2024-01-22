@@ -717,7 +717,7 @@ static ssize_t writeback_store(struct device *dev,
 		bio.bi_iter.bi_sector = blk_idx * (PAGE_SIZE >> 9);
 		bio_add_page(&bio, bvec.bv_page, bvec.bv_len,
 				bvec.bv_offset);
-		bio.bi_rw = REQ_WRITE | REQ_SYNC;
+		bio_set_op_attrs(&bio, REQ_OP_WRITE, REQ_SYNC);
 		/*
 		 * XXX: A single page IO would be inefficient for write
 		 * but it would be not bad as starter.
