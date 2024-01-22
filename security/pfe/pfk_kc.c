@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2015-2018, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -129,6 +129,16 @@ static inline void kc_spin_lock(void)
 static inline void kc_spin_unlock(void)
 {
 	spin_unlock_irqrestore(&kc_lock, flags);
+}
+
+/**
+ * pfk_kc_get_storage_type() - return the hardware storage type.
+ *
+ * Return: storage type queried during bootup.
+ */
+const char *pfk_kc_get_storage_type(void)
+{
+	return s_type;
 }
 
 /**
@@ -273,18 +283,18 @@ static struct kc_entry *kc_find_key_at_index(const unsigned char *key,
 	for (i = *starting_index; i < PFK_KC_TABLE_SIZE; i++) {
 		entry = kc_entry_at_index(i);
 
-		if (NULL != salt) {
+		if (salt != NULL) {
 			if (entry->salt_size != salt_size)
 				continue;
 
-			if (0 != memcmp(entry->salt, salt, salt_size))
+			if (memcmp(entry->salt, salt, salt_size) != 0)
 				continue;
 		}
 
 		if (entry->key_size != key_size)
 			continue;
 
-		if (0 == memcmp(entry->key, key, key_size)) {
+		if (memcmp(entry->key, key, key_size) == 0) {
 			*starting_index = i;
 			return entry;
 		}
@@ -373,6 +383,11 @@ static void kc_clear_entry(struct kc_entry *entry)
 
 	entry->time_stamp = 0;
 	entry->scm_error = 0;
+
+	entry->state = FREE;
+
+	entry->loaded_ref_cnt = 0;
+	entry->thread_pending = NULL;
 }
 
 /**
@@ -384,13 +399,15 @@ static void kc_clear_entry(struct kc_entry *entry)
  * @key_size: key_size
  * @salt: salt
  * @salt_size: salt_size
+ * @data_unit: dun size
  *
  * The previous key is securely released and wiped, the new one is loaded
  * to ICE.
  * Should be invoked under spinlock
  */
 static int kc_update_entry(struct kc_entry *entry, const unsigned char *key,
-	size_t key_size, const unsigned char *salt, size_t salt_size)
+	size_t key_size, const unsigned char *salt, size_t salt_size,
+	unsigned int data_unit, int ice_rev)
 {
 	int ret;
 
@@ -407,7 +424,7 @@ static int kc_update_entry(struct kc_entry *entry, const unsigned char *key,
 	kc_spin_unlock();
 
 	ret = qti_pfk_ice_set_key(entry->key_index, entry->key,
-			entry->salt, s_type);
+			entry->salt, s_type, data_unit, ice_rev);
 
 	kc_spin_lock();
 	return ret;
@@ -473,7 +490,7 @@ int pfk_kc_deinit(void)
  */
 int pfk_kc_load_key_start(const unsigned char *key, size_t key_size,
 		const unsigned char *salt, size_t salt_size, u32 *key_index,
-		bool async)
+		bool async, unsigned int data_unit, int ice_rev)
 {
 	int ret = 0;
 	struct kc_entry *entry = NULL;
@@ -482,8 +499,10 @@ int pfk_kc_load_key_start(const unsigned char *key, size_t key_size,
 	if (!kc_is_ready())
 		return -ENODEV;
 
-	if (!key || !salt || !key_index)
+	if (!key || !salt || !key_index) {
+		pr_err("%s key/salt/key_index NULL\n", __func__);
 		return -EINVAL;
+	}
 
 	if (key_size != PFK_KC_KEY_SIZE) {
 		pr_err("unsupported key size %zu\n", key_size);
@@ -500,7 +519,7 @@ int pfk_kc_load_key_start(const unsigned char *key, size_t key_size,
 	entry = kc_find_key(key, key_size, salt, salt_size);
 	if (!entry) {
 		if (async) {
-			pr_debug("found empty entry, a separate task will populate it\n");
+			pr_debug("%s task will populate entry\n", __func__);
 			kc_spin_unlock();
 			return -EAGAIN;
 		}
@@ -536,7 +555,8 @@ int pfk_kc_load_key_start(const unsigned char *key, size_t key_size,
 			break;
 		}
 	case (FREE):
-		ret = kc_update_entry(entry, key, key_size, salt, salt_size);
+		ret = kc_update_entry(entry, key, key_size, salt, salt_size,
+					data_unit, ice_rev);
 		if (ret) {
 			entry->state = SCM_ERROR;
 			entry->scm_error = ret;
@@ -636,9 +656,9 @@ void pfk_kc_load_key_end(const unsigned char *key, size_t key_size,
 	if (!ref_cnt) {
 		entry->state = INACTIVE;
 		/*
-		* wake-up invalidation if it's waiting
-		* for the entry to be released
-		*/
+		 * wake-up invalidation if it's waiting
+		 * for the entry to be released
+		 */
 		if (entry->thread_pending) {
 			tmp_pending = entry->thread_pending;
 			entry->thread_pending = NULL;

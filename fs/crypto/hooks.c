@@ -211,8 +211,9 @@ EXPORT_SYMBOL_GPL(__fscrypt_encrypt_symlink);
  *
  * Return: the presentable symlink target or an ERR_PTR()
  */
-void *fscrypt_get_symlink(struct inode *inode, const void *caddr,
-				unsigned int max_size)
+const char *fscrypt_get_symlink(struct inode *inode, const void *caddr,
+				unsigned int max_size,
+				struct delayed_call *done)
 {
 	const struct fscrypt_symlink_data *sd;
 	struct fscrypt_str cstr, pstr;
@@ -260,6 +261,7 @@ void *fscrypt_get_symlink(struct inode *inode, const void *caddr,
 		goto err_kfree;
 
 	pstr.name[pstr.len] = '\0';
+	set_delayed_call(done, kfree_link, pstr.name);
 	return pstr.name;
 
 err_kfree:

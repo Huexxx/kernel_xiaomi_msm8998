@@ -748,8 +748,7 @@ static void blk_account_io_merge(struct request *req)
 
 static bool crypto_not_mergeable(const struct bio *bio, const struct bio *nxt)
 {
-	return (!pft_allow_merge_bio(bio, nxt) ||
-		!pfk_allow_merge_bio(bio, nxt));
+	return (!pfk_allow_merge_bio(bio, nxt));
 }
 
 /*
