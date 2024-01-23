@@ -333,6 +333,8 @@ void ext4_io_submit(struct ext4_io_submit *io)
 	if (bio) {
 		int io_op_flags = io->io_wbc->sync_mode == WB_SYNC_ALL ?
 				  WRITE_SYNC : 0;
+		if (io->io_flags & EXT4_IO_ENCRYPTED)
+			io_op_flags |= REQ_NOENCRYPT;
 		bio_set_op_attrs(io->io_bio, REQ_OP_WRITE, io_op_flags);
 		io->io_bio->bi_write_hint = io->io_end->inode->i_write_hint;
 		submit_bio(io->io_bio);
@@ -343,6 +345,7 @@ void ext4_io_submit(struct ext4_io_submit *io)
 void ext4_io_submit_init(struct ext4_io_submit *io,
 			 struct writeback_control *wbc)
 {
+	io->io_flags = 0;
 	io->io_wbc = wbc;
 	io->io_bio = NULL;
 	io->io_end = NULL;
@@ -489,6 +492,8 @@ int ext4_bio_write_page(struct ext4_io_submit *io,
 	do {
 		if (!buffer_async_write(bh))
 			continue;
+		if (bounce_page)
+			io->io_flags |= EXT4_IO_ENCRYPTED;
 		ret = io_submit_add_bh(io, inode, page, bounce_page, bh);
 		if (ret) {
 			/*
