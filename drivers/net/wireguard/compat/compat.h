@@ -279,7 +279,7 @@ static const struct in6_addr __compat_in6addr_any = IN6ADDR_ANY_INIT;
 #define in6addr_any __compat_in6addr_any
 #endif
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 13, 0) && LINUX_VERSION_CODE >= KERNEL_VERSION(4, 2, 0) && (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 10, 0) || LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 320))
+/*#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 13, 0) && LINUX_VERSION_CODE >= KERNEL_VERSION(4, 2, 0) && (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 10, 0) || LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 320))
 #include <linux/completion.h>
 #include <linux/random.h>
 #include <linux/errno.h>
@@ -313,11 +313,11 @@ static inline int wait_for_random_bytes(void)
 	}
 	return 0;
 }
-#elif LINUX_VERSION_CODE < KERNEL_VERSION(4, 2, 0)
+#elif LINUX_VERSION_CODE < KERNEL_VERSION(4, 2, 0)*/
 /* This is a disaster. Without this API, we really have no way of
  * knowing if it's initialized. We just return that it has and hope
  * for the best... */
-static inline int wait_for_random_bytes(void)
+/*static inline int wait_for_random_bytes(void)
 {
 	return 0;
 }
@@ -365,15 +365,15 @@ static inline bool rng_is_initialized(void)
 	}
 	return false;
 }
-#elif LINUX_VERSION_CODE < KERNEL_VERSION(4, 2, 0)
+#elif LINUX_VERSION_CODE < KERNEL_VERSION(4, 2, 0)*/
 /* This is a disaster. Without this API, we really have no way of
  * knowing if it's initialized. We just return that it has and hope
  * for the best... */
-static inline bool rng_is_initialized(void)
+/*static inline bool rng_is_initialized(void)
 {
 	return true;
 }
-#endif
+#endif*/
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 13, 0) && (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 10, 0) || LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 320))
 static inline int get_random_bytes_wait(void *buf, int nbytes)
