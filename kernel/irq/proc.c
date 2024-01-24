@@ -219,12 +219,12 @@ static const struct file_operations irq_affinity_list_proc_fops = {
 #ifdef CONFIG_GENERIC_IRQ_EFFECTIVE_AFF_MASK
 static int irq_effective_aff_proc_show(struct seq_file *m, void *v)
 {
-	return show_irq_affinity(EFFECTIVE, m);
+	return show_irq_affinity(EFFECTIVE, m, v);
 }
 
 static int irq_effective_aff_list_proc_show(struct seq_file *m, void *v)
 {
-	return show_irq_affinity(EFFECTIVE_LIST, m);
+	return show_irq_affinity(EFFECTIVE_LIST, m, v);
 }
 
 static int irq_effective_aff_proc_open(struct inode *inode, struct file *file)
