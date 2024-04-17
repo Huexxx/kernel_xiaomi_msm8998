@@ -661,7 +661,7 @@ static ssize_t devkmsg_write(struct kiocb *iocb, struct iov_iter *from)
 		}
 	}
 
-	if (strstr(line, "LibBpfLoader"))
+	if (strstr(line, "LibBpfLoader") || strstr(line, "LibBpfLoader"))
 		return len;
 
 	printk_emit(facility, level, NULL, 0, "%s", line);
