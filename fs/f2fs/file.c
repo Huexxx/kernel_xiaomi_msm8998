@@ -2950,17 +2950,17 @@ static inline __u32 f2fs_iflags_to_xflags(unsigned long iflags)
 {
 	__u32 xflags = 0;
 
-	if (iflags & FS_SYNC_FL)
+	if (iflags & F2FS_SYNC_FL)
 		xflags |= FS_XFLAG_SYNC;
-	if (iflags & FS_IMMUTABLE_FL)
+	if (iflags & F2FS_IMMUTABLE_FL)
 		xflags |= FS_XFLAG_IMMUTABLE;
-	if (iflags & FS_APPEND_FL)
+	if (iflags & F2FS_APPEND_FL)
 		xflags |= FS_XFLAG_APPEND;
-	if (iflags & FS_NODUMP_FL)
+	if (iflags & F2FS_NODUMP_FL)
 		xflags |= FS_XFLAG_NODUMP;
-	if (iflags & FS_NOATIME_FL)
+	if (iflags & F2FS_NOATIME_FL)
 		xflags |= FS_XFLAG_NOATIME;
-	if (iflags & FS_PROJINHERIT_FL)
+	if (iflags & F2FS_PROJINHERIT_FL)
 		xflags |= FS_XFLAG_PROJINHERIT;
 	return xflags;
 }
@@ -2969,31 +2969,23 @@ static inline __u32 f2fs_iflags_to_xflags(unsigned long iflags)
 				  FS_XFLAG_APPEND | FS_XFLAG_NODUMP | \
 				  FS_XFLAG_NOATIME | FS_XFLAG_PROJINHERIT)
 
-/* Flags we can manipulate with through EXT4_IOC_FSSETXATTR */
-#define F2FS_FL_XFLAG_VISIBLE		(FS_SYNC_FL | \
-					 FS_IMMUTABLE_FL | \
-					 FS_APPEND_FL | \
-					 FS_NODUMP_FL | \
-					 FS_NOATIME_FL | \
-					 FS_PROJINHERIT_FL)
-
 /* Transfer xflags flags to internal */
 static inline unsigned long f2fs_xflags_to_iflags(__u32 xflags)
 {
 	unsigned long iflags = 0;
 
 	if (xflags & FS_XFLAG_SYNC)
-		iflags |= FS_SYNC_FL;
+		iflags |= F2FS_SYNC_FL;
 	if (xflags & FS_XFLAG_IMMUTABLE)
-		iflags |= FS_IMMUTABLE_FL;
+		iflags |= F2FS_IMMUTABLE_FL;
 	if (xflags & FS_XFLAG_APPEND)
-		iflags |= FS_APPEND_FL;
+		iflags |= F2FS_APPEND_FL;
 	if (xflags & FS_XFLAG_NODUMP)
-		iflags |= FS_NODUMP_FL;
+		iflags |= F2FS_NODUMP_FL;
 	if (xflags & FS_XFLAG_NOATIME)
-		iflags |= FS_NOATIME_FL;
+		iflags |= F2FS_NOATIME_FL;
 	if (xflags & FS_XFLAG_PROJINHERIT)
-		iflags |= FS_PROJINHERIT_FL;
+		iflags |= F2FS_PROJINHERIT_FL;
 
 	return iflags;
 }
@@ -3006,7 +2998,7 @@ static int f2fs_ioc_fsgetxattr(struct file *filp, unsigned long arg)
 
 	memset(&fa, 0, sizeof(struct fsxattr));
 	fa.fsx_xflags = f2fs_iflags_to_xflags(fi->i_flags &
-				(FS_FL_USER_VISIBLE | FS_PROJINHERIT_FL));
+				(F2FS_FL_USER_VISIBLE | F2FS_PROJINHERIT_FL));
 
 	if (f2fs_sb_has_project_quota(inode->i_sb))
 		fa.fsx_projid = (__u32)from_kprojid(&init_user_ns,
