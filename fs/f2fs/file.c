@@ -2998,7 +2998,7 @@ static int f2fs_ioc_fsgetxattr(struct file *filp, unsigned long arg)
 
 	memset(&fa, 0, sizeof(struct fsxattr));
 	fa.fsx_xflags = f2fs_iflags_to_xflags(fi->i_flags &
-				(F2FS_FL_USER_VISIBLE | F2FS_PROJINHERIT_FL));
+				F2FS_FL_USER_VISIBLE);
 
 	if (f2fs_sb_has_project_quota(inode->i_sb))
 		fa.fsx_projid = (__u32)from_kprojid(&init_user_ns,
