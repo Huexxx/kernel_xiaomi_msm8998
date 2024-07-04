@@ -82,7 +82,7 @@ static int gfs2_unstuffer_page(struct gfs2_inode *ip, struct buffer_head *dibh,
 	}
 
 	if (!page_has_buffers(page))
-		create_empty_buffers(page, 1 << inode->i_blkbits,
+		create_empty_buffers(page, i_blocksize(inode),
 				     (1 << BH_Uptodate));
 
 	bh = page_buffers(page);

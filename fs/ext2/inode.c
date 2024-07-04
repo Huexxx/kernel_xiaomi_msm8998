@@ -738,7 +738,7 @@ static int ext2_get_blocks(struct inode *inode,
 		 * initialised
 		 */
 		err = dax_clear_blocks(inode, le32_to_cpu(chain[depth-1].key),
-						1 << inode->i_blkbits);
+						i_blocksize(inode));
 		if (err) {
 			mutex_unlock(&ei->truncate_mutex);
 			goto cleanup;
