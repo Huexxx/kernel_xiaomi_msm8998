@@ -749,7 +749,7 @@ xfs_convert_page(
 	if (!xfs_imap_valid(inode, imap, end_offset))
 		goto fail_unlock_page;
 
-	len = 1 << inode->i_blkbits;
+	len = i_blocksize(inode);
 	p_offset = min_t(unsigned long, end_offset & (PAGE_SIZE - 1),
 					PAGE_SIZE);
 	p_offset = p_offset ? roundup(p_offset, len) : PAGE_SIZE;
@@ -1050,7 +1050,7 @@ xfs_vm_writepage(
 		end_offset = offset;
 	}
 
-	len = 1 << inode->i_blkbits;
+	len = i_blocksize(inode);
 
 	bh = head = page_buffers(page);
 	offset = page_offset(page);
@@ -1504,7 +1504,7 @@ __xfs_get_blocks(
 	}
 
 	/* trim mapping down to size requested */
-	if (direct || size > (1 << inode->i_blkbits))
+	if (direct || size > i_blocksize(inode))
 		xfs_map_trim_size(inode, iblock, bh_result,
 				  &imap, offset, size);
 

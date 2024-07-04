@@ -2967,7 +2967,7 @@ int ll_getattr(struct vfsmount *mnt, struct dentry *de, struct kstat *stat)
 	stat->atime = inode->i_atime;
 	stat->mtime = inode->i_mtime;
 	stat->ctime = inode->i_ctime;
-	stat->blksize = 1 << inode->i_blkbits;
+	stat->blksize = i_blocksize(inode);
 
 	stat->size = i_size_read(inode);
 	stat->blocks = inode->i_blocks;

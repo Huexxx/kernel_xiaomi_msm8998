@@ -410,7 +410,7 @@ int ext4_bio_write_page(struct ext4_io_submit *io,
 	int nr_submitted = 0;
 	int nr_to_submit = 0;
 
-	blocksize = 1 << inode->i_blkbits;
+	blocksize = i_blocksize(inode);
 
 	BUG_ON(!PageLocked(page));
 	BUG_ON(PageWriteback(page));
