@@ -208,6 +208,7 @@ static int uuid_is_zero(__u8 u[16])
 static int ext4_ioctl_setflags(struct inode *inode,
 			       unsigned int flags)
 {
+	struct super_block *sb = inode->i_sb;	
 	struct ext4_inode_info *ei = EXT4_I(inode);
 	handle_t *handle = NULL;
 	int err = EPERM, migrate = 0;
@@ -256,6 +257,23 @@ static int ext4_ioctl_setflags(struct inode *inode,
 		err = ext4_truncate(inode);
 		if (err)
 			goto flags_out;
+	}
+
+	if ((flags ^ oldflags) & EXT4_CASEFOLD_FL) {
+		if (!ext4_has_feature_casefold(sb)) {
+			err = -EOPNOTSUPP;
+			goto flags_out;
+		}
+
+		if (!S_ISDIR(inode->i_mode)) {
+			err = -ENOTDIR;
+			goto flags_out;
+		}
+
+		if (!ext4_empty_dir(inode)) {
+			err = -ENOTEMPTY;
+			goto flags_out;
+		}
 	}
 
 	handle = ext4_journal_start(inode, EXT4_HT_INODE, 1);
