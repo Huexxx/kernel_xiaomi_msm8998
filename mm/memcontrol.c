@@ -1476,8 +1476,8 @@ static int mem_cgroup_soft_reclaim(struct mem_cgroup *root_memcg,
 			}
 			continue;
 		}
-		total += mem_cgroup_shrink_node(victim, gfp_mask, false,
-					zone, &nr_scanned);
+		total += mem_cgroup_shrink_node_zone(victim, gfp_mask, false,
+						     zone, &nr_scanned);
 		*total_scanned += nr_scanned;
 		if (!soft_limit_excess(root_memcg))
 			break;

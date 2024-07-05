@@ -2312,13 +2312,12 @@ out:
 }
 
 /*
- * This is a basic per-node page freer.  Used by both kswapd and direct reclaim.
+ * This is a basic per-zone page freer.  Used by both kswapd and direct reclaim.
  */
-static void shrink_node_memcg(struct pglist_data *pgdat, struct mem_cgroup *memcg,
+static void shrink_zone_memcg(struct zone *zone, struct mem_cgroup *memcg,
 			      struct scan_control *sc, unsigned long *lru_pages)
 {
-	struct zone *zone = &pgdat->node_zones[sc->reclaim_idx];
-	struct lruvec *lruvec = mem_cgroup_lruvec(pgdat, zone, memcg);
+	struct lruvec *lruvec = mem_cgroup_zone_lruvec(zone, memcg);
 	unsigned long nr[NR_LRU_LISTS];
 	unsigned long targets[NR_LRU_LISTS];
 	unsigned long nr_to_scan;
@@ -2449,14 +2448,13 @@ static bool in_reclaim_compaction(struct scan_control *sc)
  * calls try_to_compact_zone() that it will have enough free pages to succeed.
  * It will give up earlier than that if there is difficulty reclaiming pages.
  */
-static inline bool should_continue_reclaim(struct pglist_data *pgdat,
+static inline bool should_continue_reclaim(struct zone *zone,
 					unsigned long nr_reclaimed,
 					unsigned long nr_scanned,
 					struct scan_control *sc)
 {
 	unsigned long pages_for_compaction;
 	unsigned long inactive_lru_pages;
-	int z;
 
 	/* If not in reclaim/compaction mode, stop */
 	if (!in_reclaim_compaction(sc))
@@ -2490,29 +2488,21 @@ static inline bool should_continue_reclaim(struct pglist_data *pgdat,
 	 * inactive lists are large enough, continue reclaiming
 	 */
 	pages_for_compaction = (2UL << sc->order);
-	inactive_lru_pages = node_page_state(pgdat, NR_INACTIVE_FILE);
+	inactive_lru_pages = node_page_state(zone->zone_pgdat, NR_INACTIVE_FILE);
 	if (get_nr_swap_pages() > 0)
-		inactive_lru_pages += node_page_state(pgdat, NR_INACTIVE_ANON);
+		inactive_lru_pages += node_page_state(zone->zone_pgdat, NR_INACTIVE_ANON);
 	if (sc->nr_reclaimed < pages_for_compaction &&
 			inactive_lru_pages > pages_for_compaction)
 		return true;
 
 	/* If compaction would go ahead or the allocation would succeed, stop */
-	for (z = 0; z <= sc->reclaim_idx; z++) {
-		struct zone *zone = &pgdat->node_zones[z];
-		if (!populated_zone(zone))
-			continue;
-
-		switch (compaction_suitable(zone, sc->order, 0, sc->reclaim_idx)) {
-		case COMPACT_PARTIAL:
-		case COMPACT_CONTINUE:
-			return false;
-		default:
-			/* check next zone */
-			;
-		}
+	switch (compaction_suitable(zone, sc->order, 0, 0)) {
+	case COMPACT_PARTIAL:
+	case COMPACT_CONTINUE:
+		return false;
+	default:
+		return true;
 	}
-	return true;
 }
 
 static bool shrink_node(pg_data_t *pgdat, struct scan_control *sc,
@@ -2521,14 +2511,15 @@ static bool shrink_node(pg_data_t *pgdat, struct scan_control *sc,
 	struct reclaim_state *reclaim_state = current->reclaim_state;
 	unsigned long nr_reclaimed, nr_scanned;
 	bool reclaimable = false;
+	struct zone *zone = &pgdat->node_zones[classzone_idx];
 
 	do {
 		struct mem_cgroup *root = sc->target_mem_cgroup;
 		struct mem_cgroup_reclaim_cookie reclaim = {
-			.zone = &pgdat->node_zones[classzone_idx],
+			.zone = zone,
 			.priority = sc->priority,
 		};
-		unsigned long node_lru_pages = 0;
+		unsigned long zone_lru_pages = 0;
 		struct mem_cgroup *memcg;
 
 		nr_reclaimed = sc->nr_reclaimed;
@@ -2549,11 +2540,11 @@ static bool shrink_node(pg_data_t *pgdat, struct scan_control *sc,
 			reclaimed = sc->nr_reclaimed;
 			scanned = sc->nr_scanned;
 
-			shrink_node_memcg(pgdat, memcg, sc, &lru_pages);
-			node_lru_pages += lru_pages;
+			shrink_zone_memcg(zone, memcg, sc, &lru_pages);
+			zone_lru_pages += lru_pages;
 
 			if (memcg)
-				shrink_slab(sc->gfp_mask, pgdat->node_id,
+				shrink_slab(sc->gfp_mask, zone_to_nid(zone),
 					    memcg, sc->nr_scanned - scanned,
 					    lru_pages);
 
@@ -2565,7 +2556,7 @@ static bool shrink_node(pg_data_t *pgdat, struct scan_control *sc,
 			/*
 			 * Direct reclaim and kswapd have to scan all memory
 			 * cgroups to fulfill the overall scan target for the
-			 * node.
+			 * zone.
 			 *
 			 * Limit reclaim, on the other hand, only cares about
 			 * nr_to_reclaim pages to be reclaimed and it will
@@ -2584,9 +2575,9 @@ static bool shrink_node(pg_data_t *pgdat, struct scan_control *sc,
 		 * the eligible LRU pages were scanned.
 		 */
 		if (global_reclaim(sc))
-			shrink_slab(sc->gfp_mask, pgdat->node_id, NULL,
+			shrink_slab(sc->gfp_mask, zone_to_nid(zone), NULL,
 				    sc->nr_scanned - nr_scanned,
-				    node_lru_pages);
+				    zone_lru_pages);
 
 		/*
 		 * Record the subtree's reclaim efficiency. The reclaimed
@@ -2609,7 +2600,7 @@ static bool shrink_node(pg_data_t *pgdat, struct scan_control *sc,
 		if (sc->nr_reclaimed - nr_reclaimed)
 			reclaimable = true;
 
-	} while (should_continue_reclaim(pgdat, sc->nr_reclaimed - nr_reclaimed,
+	} while (should_continue_reclaim(zone, sc->nr_reclaimed - nr_reclaimed,
 					 sc->nr_scanned - nr_scanned, sc));
 
 	return reclaimable;
@@ -3022,7 +3013,7 @@ unsigned long try_to_free_pages(struct zonelist *zonelist, int order,
 
 #ifdef CONFIG_MEMCG
 
-unsigned long mem_cgroup_shrink_node(struct mem_cgroup *memcg,
+unsigned long mem_cgroup_shrink_node_zone(struct mem_cgroup *memcg,
 						gfp_t gfp_mask, bool noswap,
 						struct zone *zone,
 						unsigned long *nr_scanned)
@@ -3047,11 +3038,11 @@ unsigned long mem_cgroup_shrink_node(struct mem_cgroup *memcg,
 	/*
 	 * NOTE: Although we can get the priority field, using it
 	 * here is not a good idea, since it limits the pages we can scan.
-	 * if we don't reclaim here, the shrink_node from balance_pgdat
+	 * if we don't reclaim here, the shrink_zone from balance_pgdat
 	 * will pick up pages from other mem cgroup's as well. We hack
 	 * the priority and make it zero.
 	 */
-	shrink_node_memcg(zone->zone_pgdat, memcg, &sc, &lru_pages);
+	shrink_zone_memcg(zone, memcg, &sc, &lru_pages);
 
 	trace_mm_vmscan_memcg_softlimit_reclaim_end(sc.nr_reclaimed);
 
@@ -3112,7 +3103,7 @@ static void age_active_anon(struct pglist_data *pgdat,
 
 	memcg = mem_cgroup_iter(NULL, NULL, NULL);
 	do {
-		struct lruvec *lruvec = mem_cgroup_lruvec(pgdat, zone, memcg);
+		struct lruvec *lruvec = mem_cgroup_zone_lruvec(zone, memcg);
 
 		if (inactive_list_is_low(lruvec, false))
 			shrink_active_list(SWAP_CLUSTER_MAX, lruvec,
