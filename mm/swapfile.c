@@ -191,6 +191,8 @@ static void discard_swap_cluster(struct swap_info_struct *si,
 	int found_extent = 0;
 
 	while (nr_pages) {
+		struct list_head *lh;
+
 		if (se->start_page <= start_page &&
 		    start_page < se->start_page + se->nr_pages) {
 			pgoff_t offset = start_page - se->start_page;
@@ -212,7 +214,8 @@ static void discard_swap_cluster(struct swap_info_struct *si,
 				break;
 		}
 
-		se = list_next_entry(se, list);
+		lh = se->list.next;
+		se = list_entry(lh, struct swap_extent, list);
 	}
 }
 
@@ -946,7 +949,7 @@ int swp_swapcount(swp_entry_t entry)
 	VM_BUG_ON(page_private(page) != SWP_CONTINUED);
 
 	do {
-		page = list_next_entry(page, lru);
+		page = list_entry(page->lru.next, struct page, lru);
 		map = kmap_atomic(page);
 		tmp_count = map[offset];
 		kunmap_atomic(map);
@@ -1691,11 +1694,14 @@ static sector_t map_swap_entry(swp_entry_t entry, struct block_device **bdev)
 	se = start_se;
 
 	for ( ; ; ) {
+		struct list_head *lh;
+
 		if (se->start_page <= offset &&
 				offset < (se->start_page + se->nr_pages)) {
 			return se->start_block + (offset - se->start_page);
 		}
-		se = list_next_entry(se, list);
+		lh = se->list.next;
+		se = list_entry(lh, struct swap_extent, list);
 		sis->curr_swap_extent = se;
 		BUG_ON(se == start_se);		/* It *must* be present */
 	}
@@ -1719,7 +1725,7 @@ static void destroy_swap_extents(struct swap_info_struct *sis)
 	while (!list_empty(&sis->first_swap_extent.list)) {
 		struct swap_extent *se;
 
-		se = list_first_entry(&sis->first_swap_extent.list,
+		se = list_entry(sis->first_swap_extent.list.next,
 				struct swap_extent, list);
 		list_del(&se->list);
 		kfree(se);
