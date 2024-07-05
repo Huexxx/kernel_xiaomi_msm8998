@@ -787,7 +787,7 @@ isolate_migratepages_block(struct compact_control *cc, unsigned long low_pfn,
 		 * if contended.
 		 */
 		if (!(low_pfn % SWAP_CLUSTER_MAX)
-		    && compact_unlock_should_abort(zone_lru_lock(zone), flags,
+		    && compact_unlock_should_abort(&zone->lru_lock, flags,
 								&locked, cc))
 			break;
 
@@ -848,7 +848,7 @@ isolate_migratepages_block(struct compact_control *cc, unsigned long low_pfn,
 			if (unlikely(__PageMovable(page)) &&
 					!PageIsolated(page)) {
 				if (locked) {
-					spin_unlock_irqrestore(zone_lru_lock(zone),
+					spin_unlock_irqrestore(&zone->lru_lock,
 									flags);
 					locked = false;
 				}
@@ -871,7 +871,7 @@ isolate_migratepages_block(struct compact_control *cc, unsigned long low_pfn,
 
 		/* If we already hold the lock, we can skip some rechecking */
 		if (!locked) {
-			locked = compact_trylock_irqsave(zone_lru_lock(zone),
+			locked = compact_trylock_irqsave(&zone->lru_lock,
 								&flags, cc);
 			if (!locked)
 				break;
@@ -922,7 +922,7 @@ isolate_success:
 		low_pfn = end_pfn;
 
 	if (locked)
-		spin_unlock_irqrestore(zone_lru_lock(zone), flags);
+		spin_unlock_irqrestore(&zone->lru_lock, flags);
 
 	/*
 	 * Update the pageblock-skip information and cached scanner pfn,
