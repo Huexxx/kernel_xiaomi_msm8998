@@ -3130,7 +3130,7 @@ __alloc_pages_direct_compact(gfp_t gfp_mask, unsigned int order,
 		enum migrate_mode mode, int *contended_compaction,
 		bool *deferred_compaction)
 {
-	enum compact_result compact_result;
+	unsigned long compact_result;
 	struct page *page;
 
 	if (!order)
