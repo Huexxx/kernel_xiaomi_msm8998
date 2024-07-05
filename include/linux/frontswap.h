@@ -106,9 +106,8 @@ static inline void frontswap_invalidate_area(unsigned type)
 
 static inline void frontswap_init(unsigned type, unsigned long *map)
 {
-#ifdef CONFIG_FRONTSWAP
-	__frontswap_init(type, map);
-#endif
+	if (frontswap_enabled())
+		__frontswap_init(type, map);
 }
 
 #endif /* _LINUX_FRONTSWAP_H */
