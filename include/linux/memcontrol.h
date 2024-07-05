@@ -667,6 +667,12 @@ mem_cgroup_node_nr_lru_pages(struct mem_cgroup *memcg,
 }
 
 static inline void
+mem_cgroup_update_lru_size(struct lruvec *lruvec, enum lru_list lru,
+			      int increment)
+{
+}
+
+static inline void
 mem_cgroup_print_oom_info(struct mem_cgroup *memcg, struct task_struct *p)
 {
 }
