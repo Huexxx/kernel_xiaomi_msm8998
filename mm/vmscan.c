@@ -2877,10 +2877,8 @@ static bool pfmemalloc_watermark_ok(pg_data_t *pgdat, bool using_kswapd)
 
 	for (i = 0; i <= ZONE_NORMAL; i++) {
 		zone = &pgdat->node_zones[i];
-		if (!populated_zone(zone))
-			continue;
-
-		if (!zone_reclaimable_pages(zone))
+		if (!populated_zone(zone) ||
+		    pgdat_reclaimable_pages(pgdat) == 0)
 			continue;
 
 		pfmemalloc_reserve += min_wmark_pages(zone);
