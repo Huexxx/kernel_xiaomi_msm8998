@@ -941,10 +941,6 @@ static inline int zonelist_node_idx(struct zoneref *zoneref)
 #endif /* CONFIG_NUMA */
 }
 
-struct zoneref *__next_zones_zonelist(struct zoneref *z,
-					enum zone_type highest_zoneidx,
-					nodemask_t *nodes);
-
 /**
  * next_zones_zonelist - Returns the next zone at or below highest_zoneidx within the allowed nodemask using a cursor within a zonelist as a starting point
  * @z - The cursor used as a starting point for the search
@@ -957,14 +953,9 @@ struct zoneref *__next_zones_zonelist(struct zoneref *z,
  * being examined. It should be advanced by one before calling
  * next_zones_zonelist again.
  */
-static __always_inline struct zoneref *next_zones_zonelist(struct zoneref *z,
+struct zoneref *next_zones_zonelist(struct zoneref *z,
 					enum zone_type highest_zoneidx,
-					nodemask_t *nodes)
-{
-	if (likely(!nodes && zonelist_zone_idx(z) <= highest_zoneidx))
-		return z;
-	return __next_zones_zonelist(z, highest_zoneidx, nodes);
-}
+					nodemask_t *nodes);
 
 /**
  * first_zones_zonelist - Returns the first zone at or below highest_zoneidx within the allowed nodemask in a zonelist
