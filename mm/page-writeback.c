@@ -299,12 +299,16 @@ static unsigned long node_dirtyable_memory(struct pglist_data *pgdat)
 
 	return nr_pages;
 }
+#ifdef CONFIG_HIGHMEM
+atomic_t highmem_file_pages;
+#endif
 
 static unsigned long highmem_dirtyable_memory(unsigned long total)
 {
 #ifdef CONFIG_HIGHMEM
 	int node;
-	unsigned long x = 0;
+	unsigned long x;
+	unsigned long dirtyable = 0;
 
 	for_each_node_state(node, N_HIGH_MEMORY) {
 		struct zone *z;
@@ -317,10 +321,10 @@ static unsigned long highmem_dirtyable_memory(unsigned long total)
 		nr_pages = zone_page_state(z, NR_FREE_PAGES);
 		/* watch for underflows */
 		nr_pages -= min(nr_pages, high_wmark_pages(z));
-		nr_pages += zone_page_state(z, NR_ZONE_INACTIVE_FILE);
-		nr_pages += zone_page_state(z, NR_ZONE_ACTIVE_FILE);
-		x += nr_pages;
+		dirtyable += nr_pages;
 	}
+
+	x = dirtyable + atomic_read(&highmem_file_pages);
 
 	/*
 	 * Unreclaimable memory (kernel memory or anonymous memory
