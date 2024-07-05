@@ -267,35 +267,26 @@ static void wb_min_max_ratio(struct bdi_writeback *wb,
  */
 
 /**
- * node_dirtyable_memory - number of dirtyable pages in a node
- * @pgdat: the node
+ * zone_dirtyable_memory - number of dirtyable pages in a zone
+ * @zone: the zone
  *
- * Returns the node's number of pages potentially available for dirty
- * page cache.  This is the base value for the per-node dirty limits.
+ * Returns the zone's number of pages potentially available for dirty
+ * page cache.  This is the base value for the per-zone dirty limits.
  */
-static unsigned long node_dirtyable_memory(struct pglist_data *pgdat)
+static unsigned long zone_dirtyable_memory(struct zone *zone)
 {
-	unsigned long nr_pages = 0;
-	int z;
+	unsigned long nr_pages;
 
-	for (z = 0; z < MAX_NR_ZONES; z++) {
-		struct zone *zone = pgdat->node_zones + z;
-
-		if (!populated_zone(zone))
-			continue;
-
-		nr_pages += zone_page_state(zone, NR_FREE_PAGES);
-	}
-
+	nr_pages = zone_page_state(zone, NR_FREE_PAGES);
 	/*
 	 * Pages reserved for the kernel should not be considered
 	 * dirtyable, to prevent a situation where reclaim has to
 	 * clean pages in order to balance the zones.
 	 */
-	nr_pages -= min(nr_pages, pgdat->totalreserve_pages);
+	nr_pages -= min(nr_pages, zone->totalreserve_pages);
 
-	nr_pages += node_page_state(pgdat, NR_INACTIVE_FILE);
-	nr_pages += node_page_state(pgdat, NR_ACTIVE_FILE);
+	nr_pages += node_page_state(zone->zone_pgdat, NR_INACTIVE_FILE);
+	nr_pages += node_page_state(zone->zone_pgdat, NR_ACTIVE_FILE);
 
 	return nr_pages;
 }
@@ -307,19 +298,10 @@ static unsigned long highmem_dirtyable_memory(unsigned long total)
 	unsigned long x = 0;
 
 	for_each_node_state(node, N_HIGH_MEMORY) {
-		struct zone *z;
-		unsigned long dirtyable;
+		struct zone *z = &NODE_DATA(node)->node_zones[ZONE_HIGHMEM];
 
-		z = &NODE_DATA(node)->node_zones[ZONE_HIGHMEM];
-		dirtyable = zone_page_state(z, NR_FREE_PAGES) +
-			zone_page_state(z, NR_ZONE_LRU_FILE);
-
-		/* watch for underflows */
-		dirtyable -= min(dirtyable, high_wmark_pages(z));
-
-		x += dirtyable;
+		x += zone_dirtyable_memory(z);
 	}
-
 	/*
 	 * Unreclaimable memory (kernel memory or anonymous memory
 	 * without swap) can bring down the dirtyable pages below
@@ -459,23 +441,23 @@ void global_dirty_limits(unsigned long *pbackground, unsigned long *pdirty)
 }
 
 /**
- * node_dirty_limit - maximum number of dirty pages allowed in a node
- * @pgdat: the node
+ * zone_dirty_limit - maximum number of dirty pages allowed in a zone
+ * @zone: the zone
  *
- * Returns the maximum number of dirty pages allowed in a node, based
- * on the node's dirtyable memory.
+ * Returns the maximum number of dirty pages allowed in a zone, based
+ * on the zone's dirtyable memory.
  */
-static unsigned long node_dirty_limit(struct pglist_data *pgdat)
+static unsigned long zone_dirty_limit(struct zone *zone)
 {
-	unsigned long node_memory = node_dirtyable_memory(pgdat);
+	unsigned long zone_memory = zone_dirtyable_memory(zone);
 	struct task_struct *tsk = current;
 	unsigned long dirty;
 
 	if (vm_dirty_bytes)
 		dirty = DIV_ROUND_UP(vm_dirty_bytes, PAGE_SIZE) *
-			node_memory / global_dirtyable_memory();
+			zone_memory / global_dirtyable_memory();
 	else
-		dirty = vm_dirty_ratio * node_memory / 100;
+		dirty = vm_dirty_ratio * zone_memory / 100;
 
 	if (tsk->flags & PF_LESS_THROTTLE || rt_task(tsk))
 		dirty += dirty / 4;
@@ -484,30 +466,19 @@ static unsigned long node_dirty_limit(struct pglist_data *pgdat)
 }
 
 /**
- * node_dirty_ok - tells whether a node is within its dirty limits
- * @pgdat: the node to check
+ * zone_dirty_ok - tells whether a zone is within its dirty limits
+ * @zone: the zone to check
  *
- * Returns %true when the dirty pages in @pgdat are within the node's
+ * Returns %true when the dirty pages in @zone are within the zone's
  * dirty limit, %false if the limit is exceeded.
  */
-bool node_dirty_ok(struct pglist_data *pgdat)
+bool zone_dirty_ok(struct zone *zone)
 {
-	int z;
-	unsigned long limit = node_dirty_limit(pgdat);
-	unsigned long nr_pages = 0;
+	unsigned long limit = zone_dirty_limit(zone);
 
-	for (z = 0; z < MAX_NR_ZONES; z++) {
-		struct zone *zone = pgdat->node_zones + z;
-
-		if (!populated_zone(zone))
-			continue;
-
-		nr_pages += zone_page_state(zone, NR_FILE_DIRTY);
-		nr_pages += zone_page_state(zone, NR_UNSTABLE_NFS);
-		nr_pages += zone_page_state(zone, NR_WRITEBACK);
-	}
-
-	return nr_pages <= limit;
+	return zone_page_state(zone, NR_FILE_DIRTY) +
+	       zone_page_state(zone, NR_UNSTABLE_NFS) +
+	       zone_page_state(zone, NR_WRITEBACK) <= limit;
 }
 
 int dirty_background_ratio_handler(struct ctl_table *table, int write,
