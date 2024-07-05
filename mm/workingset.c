@@ -305,10 +305,9 @@ bool workingset_refault(void *shadow)
  */
 void workingset_activation(struct page *page)
 {
-	struct mem_cgroup *memcg;
 	struct lruvec *lruvec;
 
-	rcu_read_lock();
+	lock_page_memcg(page);
 	/*
 	 * Filter non-memcg pages here, e.g. unmap can call
 	 * mark_page_accessed() on VDSO pages.
@@ -316,13 +315,12 @@ void workingset_activation(struct page *page)
 	 * XXX: See workingset_refault() - this should return
 	 * root_mem_cgroup even for !CONFIG_MEMCG.
 	 */
-	memcg = page_memcg_rcu(page);
-	if (!mem_cgroup_disabled() && !memcg)
+	if (!mem_cgroup_disabled() && !page_memcg(page))
 		goto out;
-	lruvec = mem_cgroup_zone_lruvec(page_zone(page), memcg);
+	lruvec = mem_cgroup_zone_lruvec(page_zone(page), page_memcg(page));
 	atomic_long_inc(&lruvec->inactive_age);
 out:
-	rcu_read_unlock();
+	unlock_page_memcg(page);
 }
 
 /*
