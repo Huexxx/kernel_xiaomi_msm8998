@@ -314,8 +314,8 @@ static int shmem_add_to_page_cache(struct page *page,
 								 page);
 	if (!error) {
 		mapping->nrpages++;
-		__inc_node_page_state(page, NR_FILE_PAGES);
-		__inc_node_page_state(page, NR_SHMEM);
+		__inc_zone_page_state(page, NR_FILE_PAGES);
+		__inc_zone_page_state(page, NR_SHMEM);
 		xa_unlock_irq(&mapping->i_pages);
 	} else {
 		page->mapping = NULL;
@@ -337,8 +337,8 @@ static void shmem_delete_from_page_cache(struct page *page, void *radswap)
 	error = shmem_radix_tree_replace(mapping, page->index, page, radswap);
 	page->mapping = NULL;
 	mapping->nrpages--;
-	__dec_node_page_state(page, NR_FILE_PAGES);
-	__dec_node_page_state(page, NR_SHMEM);
+	__dec_zone_page_state(page, NR_FILE_PAGES);
+	__dec_zone_page_state(page, NR_SHMEM);
 	xa_unlock_irq(&mapping->i_pages);
 	put_page(page);
 	BUG_ON(error);
@@ -1033,8 +1033,8 @@ static int shmem_replace_page(struct page **pagep, gfp_t gfp,
 	error = shmem_radix_tree_replace(swap_mapping, swap_index, oldpage,
 								   newpage);
 	if (!error) {
-		__inc_node_page_state(newpage, NR_FILE_PAGES);
-		__dec_node_page_state(oldpage, NR_FILE_PAGES);
+		__inc_zone_page_state(newpage, NR_FILE_PAGES);
+		__dec_zone_page_state(oldpage, NR_FILE_PAGES);
 	}
 	xa_unlock_irq(&swap_mapping->i_pages);
 

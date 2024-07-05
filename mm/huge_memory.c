@@ -1833,7 +1833,7 @@ static void __split_huge_page_refcount(struct page *page,
 	atomic_sub(tail_count, &page->_count);
 	BUG_ON(atomic_read(&page->_count) <= 0);
 
-	__mod_node_page_state(zone, NR_ANON_TRANSPARENT_HUGEPAGES, -1);
+	__mod_zone_page_state(zone, NR_ANON_TRANSPARENT_HUGEPAGES, -1);
 
 	ClearPageCompound(page);
 	compound_unlock(page);

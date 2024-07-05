@@ -1184,7 +1184,7 @@ void do_page_add_anon_rmap(struct page *page,
 		 * disabled.
 		 */
 		if (PageTransHuge(page))
-			__inc_node_page_state(page,
+			__inc_zone_page_state(page,
 					      NR_ANON_TRANSPARENT_HUGEPAGES);
 		__mod_node_page_state(page_pgdat(page), NR_ANON_MAPPED,
 				hpage_nr_pages(page));
@@ -1217,7 +1217,7 @@ void page_add_new_anon_rmap(struct page *page,
 	__SetPageSwapBacked(page);
 	atomic_set(&page->_mapcount, 0); /* increment count (starts at -1) */
 	if (PageTransHuge(page))
-		__inc_node_page_state(page, NR_ANON_TRANSPARENT_HUGEPAGES);
+		__inc_zone_page_state(page, NR_ANON_TRANSPARENT_HUGEPAGES);
 	__mod_node_page_state(page_pgdat(page), NR_ANON_MAPPED,
 			hpage_nr_pages(page));
 	__page_set_anon_rmap(page, vma, address, 1);
@@ -1292,7 +1292,7 @@ void page_remove_rmap(struct page *page)
 	 * pte lock(a spinlock) is held, which implies preemption disabled.
 	 */
 	if (PageTransHuge(page))
-		__dec_node_page_state(page, NR_ANON_TRANSPARENT_HUGEPAGES);
+		__dec_zone_page_state(page, NR_ANON_TRANSPARENT_HUGEPAGES);
 
 	__mod_node_page_state(page_pgdat(page), NR_ANON_MAPPED,
 			      -hpage_nr_pages(page));
