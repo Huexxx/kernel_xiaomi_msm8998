@@ -981,10 +981,13 @@ static __always_inline struct zoneref *next_zones_zonelist(struct zoneref *z,
  */
 static inline struct zoneref *first_zones_zonelist(struct zonelist *zonelist,
 					enum zone_type highest_zoneidx,
-					nodemask_t *nodes)
+					nodemask_t *nodes,
+					struct zone **zone)
 {
-	return next_zones_zonelist(zonelist->_zonerefs,
+	struct zoneref *z = next_zones_zonelist(zonelist->_zonerefs,
 							highest_zoneidx, nodes);
+	*zone = zonelist_zone(z);
+	return z;
 }
 
 /**
@@ -999,17 +1002,10 @@ static inline struct zoneref *first_zones_zonelist(struct zonelist *zonelist,
  * within a given nodemask
  */
 #define for_each_zone_zonelist_nodemask(zone, z, zlist, highidx, nodemask) \
-	for (z = first_zones_zonelist(zlist, highidx, nodemask), zone = zonelist_zone(z);	\
+	for (z = first_zones_zonelist(zlist, highidx, nodemask, &zone);	\
 		zone;							\
 		z = next_zones_zonelist(++z, highidx, nodemask),	\
-			zone = zonelist_zone(z))
-
-#define for_next_zone_zonelist_nodemask(zone, z, zlist, highidx, nodemask) \
-	for (zone = z->zone;	\
-		zone;							\
-		z = next_zones_zonelist(++z, highidx, nodemask),	\
-			zone = zonelist_zone(z))
-
+			zone = zonelist_zone(z))			\
 
 /**
  * for_each_zone_zonelist - helper macro to iterate over valid zones in a zonelist at or below a given zone index
