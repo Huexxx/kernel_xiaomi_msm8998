@@ -497,20 +497,19 @@ struct zone {
 	unsigned long		wait_table_hash_nr_entries;
 	unsigned long		wait_table_bits;
 
-	/* Write-intensive fields used from the page allocator */
 	ZONE_PADDING(_pad1_)
-
 	/* free areas of different sizes */
 	struct free_area	free_area[MAX_ORDER];
 
 	/* zone flags, see below */
 	unsigned long		flags;
 
-	/* Primarily protects free_area */
+	/* Write-intensive fields used from the page allocator */
 	spinlock_t		lock;
 
-	/* Write-intensive fields used by compaction and vmstats. */
 	ZONE_PADDING(_pad2_)
+
+	/* Write-intensive fields used by page reclaim */
 
 	/*
 	 * When free pages are below this point, additional steps are taken
