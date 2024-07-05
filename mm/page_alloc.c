@@ -3402,7 +3402,7 @@ retry_cpuset:
 		 * can deadlock because I/O on the device might not
 		 * complete.
 		 */
-		alloc_mask = memalloc_noio_flags(gfp_mask);
+		alloc_mask = current_gfp_context(gfp_mask);
 		ac.spread_dirty_pages = false;
 
 		page = __alloc_pages_slowpath(alloc_mask, order, &ac);
