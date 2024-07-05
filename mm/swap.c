@@ -420,26 +420,26 @@ static void pagevec_lru_move_fn(struct pagevec *pvec,
 	void *arg)
 {
 	int i;
-	struct pglist_data *pgdat = NULL;
+	struct zone *zone = NULL;
 	struct lruvec *lruvec;
 	unsigned long flags = 0;
 
 	for (i = 0; i < pagevec_count(pvec); i++) {
 		struct page *page = pvec->pages[i];
-		struct pglist_data *pagepgdat = page_pgdat(page);
+		struct zone *pagezone = page_zone(page);
 
-		if (pagepgdat != pgdat) {
-			if (pgdat)
-				spin_unlock_irqrestore(&pgdat->lru_lock, flags);
-			pgdat = pagepgdat;
-			spin_lock_irqsave(&pgdat->lru_lock, flags);
+		if (pagezone != zone) {
+			if (zone)
+				spin_unlock_irqrestore(zone_lru_lock(zone), flags);
+			zone = pagezone;
+			spin_lock_irqsave(zone_lru_lock(zone), flags);
 		}
 
-		lruvec = mem_cgroup_page_lruvec(page, pgdat);
+		lruvec = mem_cgroup_page_lruvec(page, zone->zone_pgdat);
 		(*move_fn)(page, lruvec, arg);
 	}
-	if (pgdat)
-		spin_unlock_irqrestore(&pgdat->lru_lock, flags);
+	if (zone)
+		spin_unlock_irqrestore(zone_lru_lock(zone), flags);
 	release_pages(pvec->pages, pvec->nr, pvec->cold);
 	pagevec_reinit(pvec);
 }
