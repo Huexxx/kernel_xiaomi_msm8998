@@ -3426,28 +3426,31 @@ retry_cpuset:
 				ac.nodemask, &ac.preferred_zone);
 	if (!ac.preferred_zone) {
 		page = NULL;
-		goto no_zone;
+		goto out;
 	}
 
 	ac.classzone_idx = zonelist_zone_idx(preferred_zoneref);
 
 	/* First allocation attempt */
 	page = get_page_from_freelist(alloc_mask, order, alloc_flags, &ac);
-	if (likely(page))
-		goto out;
+	if (unlikely(!page)) {
+		/*
+		 * Runtime PM, block IO and its error handling path
+		 * can deadlock because I/O on the device might not
+		 * complete.
+		 */
+		alloc_mask = memalloc_noio_flags(gfp_mask);
+		ac.spread_dirty_pages = false;
 
-	/*
-	 * Apply scoped allocation constraints. This is mainly about GFP_NOFS
-	 * resp. GFP_NOIO which has to be inherited for all allocation requests
-	 * from a particular context which has been marked by
-	 * memalloc_no{fs,io}_{save,restore}.
-	 */
-	alloc_mask = current_gfp_context(gfp_mask);
-	ac.spread_dirty_pages = false;
+		page = __alloc_pages_slowpath(alloc_mask, order, &ac);
+	}
 
-	page = __alloc_pages_slowpath(alloc_mask, order, &ac);
+	if (kmemcheck_enabled && page)
+		kmemcheck_pagealloc_alloc(page, order, gfp_mask);
 
-no_zone:
+	trace_mm_page_alloc(page, order, alloc_mask, ac.migratetype);
+
+out:
 	/*
 	 * When updating a task's mems_allowed, it is possible to race with
 	 * parallel threads in such a way that an allocation can fail while
@@ -3458,12 +3461,6 @@ no_zone:
 		alloc_mask = gfp_mask;
 		goto retry_cpuset;
 	}
-
-out:
-	if (kmemcheck_enabled && page)
-		kmemcheck_pagealloc_alloc(page, order, gfp_mask);
-
-	trace_mm_page_alloc(page, order, alloc_mask, ac.migratetype);
 
 	return page;
 }
