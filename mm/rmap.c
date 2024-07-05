@@ -1186,7 +1186,7 @@ void do_page_add_anon_rmap(struct page *page,
 		if (PageTransHuge(page))
 			__inc_zone_page_state(page,
 					      NR_ANON_TRANSPARENT_HUGEPAGES);
-		__mod_node_page_state(page_pgdat(page), NR_ANON_MAPPED,
+		__mod_node_page_state(page_pgdat(page), NR_ANON_PAGES,
 				hpage_nr_pages(page));
 	}
 	if (unlikely(PageKsm(page)))
@@ -1218,7 +1218,7 @@ void page_add_new_anon_rmap(struct page *page,
 	atomic_set(&page->_mapcount, 0); /* increment count (starts at -1) */
 	if (PageTransHuge(page))
 		__inc_zone_page_state(page, NR_ANON_TRANSPARENT_HUGEPAGES);
-	__mod_node_page_state(page_pgdat(page), NR_ANON_MAPPED,
+	__mod_node_page_state(page_pgdat(page), NR_ANON_PAGES,
 			hpage_nr_pages(page));
 	__page_set_anon_rmap(page, vma, address, 1);
 }
@@ -1282,7 +1282,7 @@ void page_remove_rmap(struct page *page)
 	if (!atomic_add_negative(-1, &page->_mapcount))
 		return;
 
-	/* Hugepages are not counted in NR_ANON_MAPPED for now. */
+	/* Hugepages are not counted in NR_ANON_PAGES for now. */
 	if (unlikely(PageHuge(page)))
 		return;
 
@@ -1294,7 +1294,7 @@ void page_remove_rmap(struct page *page)
 	if (PageTransHuge(page))
 		__dec_zone_page_state(page, NR_ANON_TRANSPARENT_HUGEPAGES);
 
-	__mod_node_page_state(page_pgdat(page), NR_ANON_MAPPED,
+	__mod_node_page_state(page_pgdat(page), NR_ANON_PAGES,
 			      -hpage_nr_pages(page));
 
 	if (unlikely(PageMlocked(page)))
