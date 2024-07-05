@@ -1472,20 +1472,20 @@ static void pcpu_dump_alloc_info(const char *lvl,
 		for (alloc_end += gi->nr_units / upa;
 		     alloc < alloc_end; alloc++) {
 			if (!(alloc % apl)) {
-				pr_cont("\n");
+				printk(KERN_CONT "\n");
 				printk("%spcpu-alloc: ", lvl);
 			}
-			pr_cont("[%0*d] ", group_width, group);
+			printk(KERN_CONT "[%0*d] ", group_width, group);
 
 			for (unit_end += upa; unit < unit_end; unit++)
 				if (gi->cpu_map[unit] != NR_CPUS)
-					pr_cont("%0*d ",
-						cpu_width, gi->cpu_map[unit]);
+					printk(KERN_CONT "%0*d ", cpu_width,
+					       gi->cpu_map[unit]);
 				else
-					pr_cont("%s ", empty_str);
+					printk(KERN_CONT "%s ", empty_str);
 		}
 	}
-	pr_cont("\n");
+	printk(KERN_CONT "\n");
 }
 
 /**

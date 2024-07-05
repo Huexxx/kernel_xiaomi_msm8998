@@ -184,8 +184,9 @@ static int kill_proc(struct task_struct *t, unsigned long addr, int trapno,
 	struct siginfo si;
 	int ret;
 
-	pr_err("MCE %#lx: Killing %s:%d due to hardware memory corruption\n",
-	       pfn, t->comm, t->pid);
+	printk(KERN_ERR
+		"MCE %#lx: Killing %s:%d due to hardware memory corruption\n",
+		pfn, t->comm, t->pid);
 	si.si_signo = SIGBUS;
 	si.si_errno = 0;
 	si.si_addr = (void *)addr;
@@ -208,8 +209,8 @@ static int kill_proc(struct task_struct *t, unsigned long addr, int trapno,
 		ret = send_sig_info(SIGBUS, &si, t);  /* synchronous? */
 	}
 	if (ret < 0)
-		pr_info("MCE: Error sending signal to %s:%d: %d\n",
-			t->comm, t->pid, ret);
+		printk(KERN_INFO "MCE: Error sending signal to %s:%d: %d\n",
+		       t->comm, t->pid, ret);
 	return ret;
 }
 
@@ -289,7 +290,8 @@ static void add_to_kill(struct task_struct *tsk, struct page *p,
 	} else {
 		tk = kmalloc(sizeof(struct to_kill), GFP_ATOMIC);
 		if (!tk) {
-			pr_err("MCE: Out of memory while machine check handling\n");
+			printk(KERN_ERR
+		"MCE: Out of memory while machine check handling\n");
 			return;
 		}
 	}
@@ -334,8 +336,9 @@ static void kill_procs(struct list_head *to_kill, int forcekill, int trapno,
 			 * signal and then access the memory. Just kill it.
 			 */
 			if (fail || tk->addr_valid == 0) {
-				pr_err("MCE %#lx: forcibly killing %s:%d because of failure to unmap corrupted page\n",
-				       pfn, tk->tsk->comm, tk->tsk->pid);
+				printk(KERN_ERR
+		"MCE %#lx: forcibly killing %s:%d because of failure to unmap corrupted page\n",
+					pfn, tk->tsk->comm, tk->tsk->pid);
 				force_sig(SIGKILL, tk->tsk);
 			}
 
@@ -347,8 +350,9 @@ static void kill_procs(struct list_head *to_kill, int forcekill, int trapno,
 			 */
 			else if (kill_proc(tk->tsk, tk->addr, trapno,
 					      pfn, page, flags) < 0)
-				pr_err("MCE %#lx: Cannot send advisory machine check signal to %s:%d\n",
-				       pfn, tk->tsk->comm, tk->tsk->pid);
+				printk(KERN_ERR
+		"MCE %#lx: Cannot send advisory machine check signal to %s:%d\n",
+					pfn, tk->tsk->comm, tk->tsk->pid);
 		}
 		put_task_struct(tk->tsk);
 		kfree(tk);
@@ -566,7 +570,7 @@ static int me_kernel(struct page *p, unsigned long pfn)
  */
 static int me_unknown(struct page *p, unsigned long pfn)
 {
-	pr_err("MCE %#lx: Unknown page state\n", pfn);
+	printk(KERN_ERR "MCE %#lx: Unknown page state\n", pfn);
 	return MF_FAILED;
 }
 
@@ -611,8 +615,8 @@ static int me_pagecache_clean(struct page *p, unsigned long pfn)
 	if (mapping->a_ops->error_remove_page) {
 		err = mapping->a_ops->error_remove_page(mapping, p);
 		if (err != 0) {
-			pr_info("MCE %#lx: Failed to punch page: %d\n",
-				pfn, err);
+			printk(KERN_INFO "MCE %#lx: Failed to punch page: %d\n",
+					pfn, err);
 		} else if (page_has_private(p) &&
 				!try_to_release_page(p, GFP_NOIO)) {
 			pr_info("MCE %#lx: failed to release buffers\n", pfn);
@@ -627,7 +631,8 @@ static int me_pagecache_clean(struct page *p, unsigned long pfn)
 		if (invalidate_inode_page(p))
 			ret = MF_RECOVERED;
 		else
-			pr_info("MCE %#lx: Failed to invalidate\n", pfn);
+			printk(KERN_INFO "MCE %#lx: Failed to invalidate\n",
+				pfn);
 	}
 	return ret;
 }
@@ -858,7 +863,8 @@ static int page_action(struct page_state *ps, struct page *p,
 	if (ps->action == me_swapcache_dirty && result == MF_DELAYED)
 		count--;
 	if (count != 0) {
-		pr_err("MCE %#lx: %s still referenced by %d users\n",
+		printk(KERN_ERR
+		       "MCE %#lx: %s still referenced by %d users\n",
 		       pfn, action_page_types[ps->type], count);
 		result = MF_FAILED;
 	}
@@ -974,7 +980,8 @@ static int hwpoison_user_mappings(struct page *p, unsigned long pfn,
 	}
 
 	if (PageSwapCache(p)) {
-		pr_err("MCE %#lx: keeping poisoned page in swap cache\n", pfn);
+		printk(KERN_ERR
+		       "MCE %#lx: keeping poisoned page in swap cache\n", pfn);
 		ttu |= TTU_IGNORE_HWPOISON;
 	}
 
@@ -992,7 +999,8 @@ static int hwpoison_user_mappings(struct page *p, unsigned long pfn,
 		} else {
 			kill = 0;
 			ttu |= TTU_IGNORE_HWPOISON;
-			pr_info("MCE %#lx: corrupted page was clean: dropped without side effects\n",
+			printk(KERN_INFO
+	"MCE %#lx: corrupted page was clean: dropped without side effects\n",
 				pfn);
 		}
 	}
@@ -1010,8 +1018,8 @@ static int hwpoison_user_mappings(struct page *p, unsigned long pfn,
 
 	ret = try_to_unmap(hpage, ttu, NULL);
 	if (ret != SWAP_SUCCESS)
-		pr_err("MCE %#lx: failed to unmap page (mapcount=%d)\n",
-		       pfn, page_mapcount(hpage));
+		printk(KERN_ERR "MCE %#lx: failed to unmap page (mapcount=%d)\n",
+				pfn, page_mapcount(hpage));
 
 	/*
 	 * Now that the dirty bit has been propagated to the
@@ -1078,14 +1086,16 @@ int memory_failure(unsigned long pfn, int trapno, int flags)
 		panic("Memory failure from trap %d on page %lx", trapno, pfn);
 
 	if (!pfn_valid(pfn)) {
-		pr_err("MCE %#lx: memory outside kernel control\n", pfn);
+		printk(KERN_ERR
+		       "MCE %#lx: memory outside kernel control\n",
+		       pfn);
 		return -ENXIO;
 	}
 
 	p = pfn_to_page(pfn);
 	orig_head = hpage = compound_head(p);
 	if (TestSetPageHWPoison(p)) {
-		pr_err("MCE %#lx: already hardware poisoned\n", pfn);
+		printk(KERN_ERR "MCE %#lx: already hardware poisoned\n", pfn);
 		return 0;
 	}
 
@@ -1214,7 +1224,7 @@ int memory_failure(unsigned long pfn, int trapno, int flags)
 	 * unpoison always clear PG_hwpoison inside page lock
 	 */
 	if (!PageHWPoison(p)) {
-		pr_err("MCE %#lx: just unpoisoned\n", pfn);
+		printk(KERN_ERR "MCE %#lx: just unpoisoned\n", pfn);
 		num_poisoned_pages_sub(nr_pages);
 		unlock_page(hpage);
 		put_hwpoison_page(hpage);

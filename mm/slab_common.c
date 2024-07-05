@@ -441,7 +441,7 @@ out_unlock:
 			panic("kmem_cache_create: Failed to create slab '%s'. Error %d\n",
 				name, err);
 		else {
-			pr_warn("kmem_cache_create(%s) failed with error %d\n",
+			printk(KERN_WARNING "kmem_cache_create(%s) failed with error %d",
 				name, err);
 			dump_stack();
 		}
