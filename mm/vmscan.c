@@ -1486,7 +1486,6 @@ static unsigned long isolate_lru_pages(unsigned long nr_to_scan,
 	struct list_head *src = &lruvec->lists[lru];
 	unsigned long nr_taken = 0;
 	unsigned long nr_zone_taken[MAX_NR_ZONES] = { 0 };
-	unsigned long nr_skipped[MAX_NR_ZONES] = { 0, };
 	unsigned long scan, nr_pages;
 	LIST_HEAD(pages_skipped);
 
@@ -1501,7 +1500,6 @@ static unsigned long isolate_lru_pages(unsigned long nr_to_scan,
 
 		if (page_zonenum(page) > sc->reclaim_idx) {
 			list_move(&page->lru, &pages_skipped);
-			nr_skipped[page_zonenum(page)]++;
 			continue;
 		}
 
@@ -1530,17 +1528,8 @@ static unsigned long isolate_lru_pages(unsigned long nr_to_scan,
 	 * scanning would soon rescan the same pages to skip and put the
 	 * system at risk of premature OOM.
 	 */
-	if (!list_empty(&pages_skipped)) {
-		int zid;
-
+	if (!list_empty(&pages_skipped))
 		list_splice(&pages_skipped, src);
-		for (zid = 0; zid < MAX_NR_ZONES; zid++) {
-			if (!nr_skipped[zid])
-				continue;
-
-			__count_zid_vm_events(PGSCAN_SKIP, zid, nr_skipped[zid]);
-		}
-	}
 	*nr_scanned = scan;
 	trace_mm_vmscan_lru_isolate(sc->reclaim_idx, sc->order, nr_to_scan, scan,
 				    nr_taken, mode, is_file_lru(lru));
@@ -2790,7 +2779,7 @@ retry:
 	delayacct_freepages_start();
 
 	if (global_reclaim(sc))
-		__count_zid_vm_events(ALLOCSTALL, sc->reclaim_idx, 1);
+		count_vm_event(ALLOCSTALL);
 
 	do {
 		vmpressure_prio(sc->gfp_mask, sc->target_mem_cgroup,
