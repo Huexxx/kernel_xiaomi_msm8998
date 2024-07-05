@@ -1941,14 +1941,15 @@ int nfs_symlink(struct inode *dir, struct dentry *dentry, const char *symname)
 	attr.ia_mode = S_IFLNK | S_IRWXUGO;
 	attr.ia_valid = ATTR_MODE;
 
-	page = alloc_page(GFP_USER);
+	page = alloc_page(GFP_HIGHUSER);
 	if (!page)
 		return -ENOMEM;
 
-	kaddr = page_address(page);
+	kaddr = kmap_atomic(page);
 	memcpy(kaddr, symname, pathlen);
 	if (pathlen < PAGE_SIZE)
 		memset(kaddr + pathlen, 0, PAGE_SIZE - pathlen);
+	kunmap_atomic(kaddr);
 
 	trace_nfs_symlink_enter(dir, dentry);
 	error = NFS_PROTO(dir)->symlink(dir, dentry, page, pathlen, &attr);
