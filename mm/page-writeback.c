@@ -307,24 +307,20 @@ static unsigned long highmem_dirtyable_memory(unsigned long total)
 {
 #ifdef CONFIG_HIGHMEM
 	int node;
-	unsigned long x;
-	unsigned long dirtyable = 0;
+	unsigned long x = 0;
+	unsigned long dirtyable = atomic_read(&highmem_file_pages);
 
 	for_each_node_state(node, N_HIGH_MEMORY) {
 		struct zone *z;
-		unsigned long nr_pages;
 
 		z = &NODE_DATA(node)->node_zones[ZONE_HIGHMEM];
-		if (!populated_zone(z))
-			continue;
- 
-		nr_pages = zone_page_state(z, NR_FREE_PAGES);
-		/* watch for underflows */
-		nr_pages -= min(nr_pages, high_wmark_pages(z));
-		dirtyable += nr_pages;
-	}
+		dirtyable += zone_page_state(z, NR_FREE_PAGES);
 
-	x = dirtyable + atomic_read(&highmem_file_pages);
+		/* watch for underflows */
+		dirtyable -= min(dirtyable, high_wmark_pages(z));
+
+		x += dirtyable;
+	}
 
 	/*
 	 * Unreclaimable memory (kernel memory or anonymous memory
