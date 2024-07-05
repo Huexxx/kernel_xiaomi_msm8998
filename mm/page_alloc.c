@@ -3749,17 +3749,9 @@ retry_cpuset:
 	/*
 	 * Restore the original nodemask if it was potentially replaced with
 	 * &cpuset_current_mems_allowed to optimize the fast-path attempt.
-	 * Also recalculate the starting point for the zonelist iterator or
-	 * we could end up iterating over non-eligible zones endlessly.
 	 */
-	if (unlikely(ac.nodemask != nodemask)) {
+	if (cpusets_enabled())
 		ac.nodemask = nodemask;
-		ac.preferred_zoneref = first_zones_zonelist(ac.zonelist,
-						ac.high_zoneidx, ac.nodemask);
-		if (!ac.preferred_zoneref->zone)
-			goto no_zone;
-	}
-
 	page = __alloc_pages_slowpath(alloc_mask, order, &ac);
 
 no_zone:
