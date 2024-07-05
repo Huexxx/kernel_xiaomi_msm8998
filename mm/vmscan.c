@@ -2005,63 +2005,83 @@ static void shrink_active_list(unsigned long nr_to_scan,
 	free_hot_cold_page_list(&l_hold, true);
 }
 
-/*
- * The inactive anon list should be small enough that the VM never has
- * to do too much work.
- *
- * The inactive file list should be small enough to leave most memory
- * to the established workingset on the scan-resistant active list,
- * but large enough to avoid thrashing the aggregate readahead window.
- *
- * Both inactive lists should also be large enough that each inactive
- * page has a chance to be referenced again before it is reclaimed.
- *
- * The inactive_ratio is the target ratio of ACTIVE to INACTIVE pages
- * on this LRU, maintained by the pageout code. A zone->inactive_ratio
- * of 3 means 3:1 or 25% of the pages are kept on the inactive list.
- *
- * total     target    max
- * memory    ratio     inactive
- * -------------------------------------
- *   10MB       1         5MB
- *  100MB       1        50MB
- *    1GB       3       250MB
- *   10GB      10       0.9GB
- *  100GB      31         3GB
- *    1TB     101        10GB
- *   10TB     320        32GB
- */
-static bool inactive_list_is_low(struct lruvec *lruvec, bool file)
+#ifdef CONFIG_SWAP
+static bool inactive_anon_is_low_global(struct zone *zone)
 {
-	unsigned long inactive_ratio;
- 	unsigned long inactive;
- 	unsigned long active;
-	unsigned long gb;
+	unsigned long active, inactive;
 
+	active = zone_page_state(zone, NR_ACTIVE_ANON);
+	inactive = zone_page_state(zone, NR_INACTIVE_ANON);
+
+	return inactive * zone->inactive_ratio < active;
+}
+
+/**
+ * inactive_anon_is_low - check if anonymous pages need to be deactivated
+ * @lruvec: LRU vector to check
+ *
+ * Returns true if the zone does not have enough inactive anon pages,
+ * meaning some active anon pages need to be deactivated.
+ */
+static bool inactive_anon_is_low(struct lruvec *lruvec)
+{
 	/*
 	 * If we don't have swap space, anonymous page deactivation
 	 * is pointless.
 	 */
-	if (!file && !total_swap_pages)
+	if (!total_swap_pages)
 		return false;
 
-	inactive = lruvec_lru_size(lruvec, file * LRU_FILE);
-	active = lruvec_lru_size(lruvec, file * LRU_FILE + LRU_ACTIVE);
+	if (!mem_cgroup_disabled())
+		return mem_cgroup_inactive_anon_is_low(lruvec);
 
-	gb = (inactive + active) >> (30 - PAGE_SHIFT);
-	if (gb)
-		inactive_ratio = int_sqrt(10 * gb);
+	return inactive_anon_is_low_global(lruvec_zone(lruvec));
+}
+#else
+static inline bool inactive_anon_is_low(struct lruvec *lruvec)
+{
+	return false;
+}
+#endif
+
+/**
+ * inactive_file_is_low - check if file pages need to be deactivated
+ * @lruvec: LRU vector to check
+ *
+ * When the system is doing streaming IO, memory pressure here
+ * ensures that active file pages get deactivated, until more
+ * than half of the file pages are on the inactive list.
+ *
+ * Once we get to that situation, protect the system's working
+ * set from being evicted by disabling active file page aging.
+ *
+ * This uses a different ratio than the anonymous pages, because
+ * the page cache uses a use-once replacement algorithm.
+ */
+static bool inactive_file_is_low(struct lruvec *lruvec)
+{
+	unsigned long inactive;
+	unsigned long active;
+
+	inactive = lruvec_lru_size(lruvec, LRU_INACTIVE_FILE);
+	active = lruvec_lru_size(lruvec, LRU_ACTIVE_FILE);
+
+	return active > inactive;
+}
+
+static bool inactive_list_is_low(struct lruvec *lruvec, enum lru_list lru)
+{
+	if (is_file_lru(lru))
+		return inactive_file_is_low(lruvec);
 	else
-		inactive_ratio = 1;
-
-	return inactive * inactive_ratio < active;
+		return inactive_anon_is_low(lruvec);
 }
 
 static unsigned long shrink_list(enum lru_list lru, unsigned long nr_to_scan,
 				 struct lruvec *lruvec, struct scan_control *sc)
 {
 	if (is_active_lru(lru)) {
-		if (inactive_list_is_low(lruvec, is_file_lru(lru)))
+		if (inactive_list_is_low(lruvec, lru))
 			shrink_active_list(nr_to_scan, lruvec, sc, lru);
 		return 0;
 	}
@@ -2183,7 +2203,7 @@ static void get_scan_count(struct lruvec *lruvec, struct mem_cgroup *memcg,
 	 * system is under heavy pressure.
 	 */
 	if (!IS_ENABLED(CONFIG_BALANCE_ANON_FILE_RECLAIM) &&
-			!inactive_list_is_low(lruvec, true) &&
+			!inactive_file_is_low(lruvec) &&
 			lruvec_lru_size(lruvec, LRU_INACTIVE_FILE) >> sc->priority) {
 		scan_balance = SCAN_FILE;
 		goto out;
@@ -2405,7 +2425,7 @@ static void shrink_zone_memcg(struct zone *zone, struct mem_cgroup *memcg,
 	 * Even if we did not try to evict anon pages at all, we want to
 	 * rebalance the anon lru active/inactive ratio.
 	 */
-	if (inactive_list_is_low(lruvec, false))
+	if (inactive_anon_is_low(lruvec))
 		shrink_active_list(SWAP_CLUSTER_MAX, lruvec,
 				   sc, LRU_ACTIVE_ANON);
 
@@ -3087,7 +3107,7 @@ static void age_active_anon(struct zone *zone, struct scan_control *sc)
 	do {
 		struct lruvec *lruvec = mem_cgroup_zone_lruvec(zone, memcg);
 
-		if (inactive_list_is_low(lruvec, false))
+		if (inactive_anon_is_low(lruvec))
 			shrink_active_list(SWAP_CLUSTER_MAX, lruvec,
 					   sc, LRU_ACTIVE_ANON);
 
