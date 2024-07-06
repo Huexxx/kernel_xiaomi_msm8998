@@ -7418,7 +7418,7 @@ out:
 
 bool btrfs_page_exists_in_range(struct inode *inode, loff_t start, loff_t end)
 {
-	struct radix_tree_root *root = &inode->i_mapping->page_tree;
+	struct radix_tree_root *root = &inode->i_mapping->i_pages;
 	int found = false;
 	void **pagep = NULL;
 	struct page *page = NULL;
