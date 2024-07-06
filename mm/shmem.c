@@ -2433,7 +2433,7 @@ static const char *shmem_get_link(struct dentry *dentry,
 			return ERR_PTR(-ECHILD);
 		}
 	} else {
-		error = shmem_getpage(inode, 0, &page, SGP_READ);
+		error = shmem_getpage(inode, 0, &page, SGP_READ, NULL);
 		if (error)
 			return ERR_PTR(error);
 		unlock_page(page);
