@@ -720,14 +720,14 @@ xfs_convert_page(
 	 * Derivation:
 	 *
 	 * End offset is the highest offset that this page should represent.
-	 * If we are on the last page, (end_offset & (PAGE_CACHE_SIZE - 1))
-	 * will evaluate non-zero and be less than PAGE_CACHE_SIZE and
+	 * If we are on the last page, (end_offset & (PAGE_SIZE - 1))
+	 * will evaluate non-zero and be less than PAGE_SIZE and
 	 * hence give us the correct page_dirty count. On any other page,
 	 * it will be zero and in that case we need page_dirty to be the
 	 * count of buffers on the page.
 	 */
 	end_offset = min_t(unsigned long long,
-			(xfs_off_t)(page->index + 1) << PAGE_CACHE_SHIFT,
+			(xfs_off_t)(page->index + 1) << PAGE_SHIFT,
 			i_size_read(inode));
 
 	/*
@@ -750,9 +750,9 @@ xfs_convert_page(
 		goto fail_unlock_page;
 
 	len = 1 << inode->i_blkbits;
-	p_offset = min_t(unsigned long, end_offset & (PAGE_CACHE_SIZE - 1),
-					PAGE_CACHE_SIZE);
-	p_offset = p_offset ? roundup(p_offset, len) : PAGE_CACHE_SIZE;
+	p_offset = min_t(unsigned long, end_offset & (PAGE_SIZE - 1),
+					PAGE_SIZE);
+	p_offset = p_offset ? roundup(p_offset, len) : PAGE_SIZE;
 	page_dirty = p_offset / len;
 
 	/*
@@ -928,7 +928,7 @@ next_buffer:
 
 	xfs_iunlock(ip, XFS_ILOCK_EXCL);
 out_invalidate:
-	xfs_vm_invalidatepage(page, 0, PAGE_CACHE_SIZE);
+	xfs_vm_invalidatepage(page, 0, PAGE_SIZE);
 	return;
 }
 
@@ -985,8 +985,8 @@ xfs_vm_writepage(
 
 	/* Is this page beyond the end of the file? */
 	offset = i_size_read(inode);
-	end_index = offset >> PAGE_CACHE_SHIFT;
-	last_index = (offset - 1) >> PAGE_CACHE_SHIFT;
+	end_index = offset >> PAGE_SHIFT;
+	last_index = (offset - 1) >> PAGE_SHIFT;
 
 	/*
 	 * The page index is less than the end_index, adjust the end_offset
@@ -1000,7 +1000,7 @@ xfs_vm_writepage(
 	 * ---------------------------------^------------------|
 	 */
 	if (page->index < end_index)
-		end_offset = (xfs_off_t)(page->index + 1) << PAGE_CACHE_SHIFT;
+		end_offset = (xfs_off_t)(page->index + 1) << PAGE_SHIFT;
 	else {
 		/*
 		 * Check whether the page to write out is beyond or straddles
@@ -1013,7 +1013,7 @@ xfs_vm_writepage(
 		 * |				    |      Straddles     |
 		 * ---------------------------------^-----------|--------|
 		 */
-		unsigned offset_into_page = offset & (PAGE_CACHE_SIZE - 1);
+		unsigned offset_into_page = offset & (PAGE_SIZE - 1);
 
 		/*
 		 * Skip the page if it is fully outside i_size, e.g. due to a
@@ -1044,7 +1044,7 @@ xfs_vm_writepage(
 		 * memory is zeroed when mapped, and writes to that region are
 		 * not written out to the file."
 		 */
-		zero_user_segment(page, offset_into_page, PAGE_CACHE_SIZE);
+		zero_user_segment(page, offset_into_page, PAGE_SIZE);
 
 		/* Adjust the end_offset to the end of file */
 		end_offset = offset;
@@ -1163,7 +1163,7 @@ xfs_vm_writepage(
 		end_index <<= inode->i_blkbits;
 
 		/* to pages */
-		end_index = (end_index - 1) >> PAGE_CACHE_SHIFT;
+		end_index = (end_index - 1) >> PAGE_SHIFT;
 
 		/* check against file size */
 		if (end_index > last_index)
@@ -1768,7 +1768,7 @@ xfs_vm_write_failed(
 	loff_t			block_offset;
 	loff_t			block_start;
 	loff_t			block_end;
-	loff_t			from = pos & (PAGE_CACHE_SIZE - 1);
+	loff_t			from = pos & (PAGE_SIZE - 1);
 	loff_t			to = from + len;
 	struct buffer_head	*bh, *head;
 
@@ -1783,7 +1783,7 @@ xfs_vm_write_failed(
 	 * start of the page by using shifts rather than masks the mismatch
 	 * problem.
 	 */
-	block_offset = (pos >> PAGE_CACHE_SHIFT) << PAGE_CACHE_SHIFT;
+	block_offset = (pos >> PAGE_SHIFT) << PAGE_SHIFT;
 
 	ASSERT(block_offset + from == pos);
 
@@ -1840,11 +1840,11 @@ xfs_vm_write_begin(
 	struct page		**pagep,
 	void			**fsdata)
 {
-	pgoff_t			index = pos >> PAGE_CACHE_SHIFT;
+	pgoff_t			index = pos >> PAGE_SHIFT;
 	struct page		*page;
 	int			status;
 
-	ASSERT(len <= PAGE_CACHE_SIZE);
+	ASSERT(len <= PAGE_SIZE);
 
 	page = grab_cache_page_write_begin(mapping, index, flags);
 	if (!page)
@@ -1869,7 +1869,7 @@ xfs_vm_write_begin(
 			truncate_pagecache_range(inode, start, pos + len);
 		}
 
-		page_cache_release(page);
+		put_page(page);
 		page = NULL;
 	}
 
@@ -1897,7 +1897,7 @@ xfs_vm_write_end(
 {
 	int			ret;
 
-	ASSERT(len <= PAGE_CACHE_SIZE);
+	ASSERT(len <= PAGE_SIZE);
 
 	ret = generic_write_end(file, mapping, pos, len, copied, page, fsdata);
 	if (unlikely(ret < len)) {

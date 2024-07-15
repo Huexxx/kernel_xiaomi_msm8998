@@ -468,7 +468,7 @@ more:
 			ret += zlen;
 		}
 
-		didpages = (page_align + ret) >> PAGE_CACHE_SHIFT;
+		didpages = (page_align + ret) >> PAGE_SHIFT;
 		pos += ret;
 		read = pos - off;
 		left -= ret;
@@ -652,8 +652,8 @@ ceph_sync_direct_write(struct kiocb *iocb, struct iov_iter *from, loff_t pos,
 		return ret;
 
 	ret = invalidate_inode_pages2_range(inode->i_mapping,
-					    pos >> PAGE_CACHE_SHIFT,
-					    (pos + count) >> PAGE_CACHE_SHIFT);
+					    pos >> PAGE_SHIFT,
+					    (pos + count) >> PAGE_SHIFT);
 	if (ret < 0)
 		dout("invalidate_inode_pages2_range returned %d\n", ret);
 
@@ -694,7 +694,7 @@ ceph_sync_direct_write(struct kiocb *iocb, struct iov_iter *from, loff_t pos,
 		 * may block.
 		 */
 		truncate_inode_pages_range(inode->i_mapping, pos,
-				   (pos+n) | (PAGE_CACHE_SIZE-1));
+				   (pos+n) | (PAGE_SIZE-1));
 		osd_req_op_extent_osd_data_pages(req, 0, pages, n, start,
 						false, false);
 
@@ -768,8 +768,8 @@ ceph_sync_write(struct kiocb *iocb, struct iov_iter *from, loff_t pos,
 		return ret;
 
 	ret = invalidate_inode_pages2_range(inode->i_mapping,
-					    pos >> PAGE_CACHE_SHIFT,
-					    (pos + count) >> PAGE_CACHE_SHIFT);
+					    pos >> PAGE_SHIFT,
+					    (pos + count) >> PAGE_SHIFT);
 	if (ret < 0)
 		dout("invalidate_inode_pages2_range returned %d\n", ret);
 
@@ -798,7 +798,7 @@ ceph_sync_write(struct kiocb *iocb, struct iov_iter *from, loff_t pos,
 		 * write from beginning of first page,
 		 * regardless of io alignment
 		 */
-		num_pages = (len + PAGE_CACHE_SIZE - 1) >> PAGE_CACHE_SHIFT;
+		num_pages = (len + PAGE_SIZE - 1) >> PAGE_SHIFT;
 
 		pages = ceph_alloc_page_vector(num_pages, GFP_KERNEL);
 		if (IS_ERR(pages)) {
@@ -915,7 +915,7 @@ again:
 	dout("aio_read %p %llx.%llx dropping cap refs on %s = %d\n",
 	     inode, ceph_vinop(inode), ceph_cap_string(got), (int)ret);
 	if (pinned_page) {
-		page_cache_release(pinned_page);
+		put_page(pinned_page);
 		pinned_page = NULL;
 	}
 	ceph_put_cap_refs(ci, got);
@@ -945,10 +945,10 @@ again:
 		if (retry_op == READ_INLINE) {
 			BUG_ON(ret > 0 || read > 0);
 			if (iocb->ki_pos < i_size &&
-			    iocb->ki_pos < PAGE_CACHE_SIZE) {
+			    iocb->ki_pos < PAGE_SIZE) {
 				loff_t end = min_t(loff_t, i_size,
 						   iocb->ki_pos + len);
-				end = min_t(loff_t, end, PAGE_CACHE_SIZE);
+				end = min_t(loff_t, end, PAGE_SIZE);
 				if (statret < end)
 					zero_user_segment(page, statret, end);
 				ret = copy_page_to_iter(page,
@@ -1218,21 +1218,21 @@ static inline void ceph_zero_partial_page(
 	struct inode *inode, loff_t offset, unsigned size)
 {
 	struct page *page;
-	pgoff_t index = offset >> PAGE_CACHE_SHIFT;
+	pgoff_t index = offset >> PAGE_SHIFT;
 
 	page = find_lock_page(inode->i_mapping, index);
 	if (page) {
 		wait_on_page_writeback(page);
-		zero_user(page, offset & (PAGE_CACHE_SIZE - 1), size);
+		zero_user(page, offset & (PAGE_SIZE - 1), size);
 		unlock_page(page);
-		page_cache_release(page);
+		put_page(page);
 	}
 }
 
 static void ceph_zero_pagecache_range(struct inode *inode, loff_t offset,
 				      loff_t length)
 {
-	loff_t nearly = round_up(offset, PAGE_CACHE_SIZE);
+	loff_t nearly = round_up(offset, PAGE_SIZE);
 	if (offset < nearly) {
 		loff_t size = nearly - offset;
 		if (length < size)
@@ -1241,8 +1241,8 @@ static void ceph_zero_pagecache_range(struct inode *inode, loff_t offset,
 		offset += size;
 		length -= size;
 	}
-	if (length >= PAGE_CACHE_SIZE) {
-		loff_t size = round_down(length, PAGE_CACHE_SIZE);
+	if (length >= PAGE_SIZE) {
+		loff_t size = round_down(length, PAGE_SIZE);
 		truncate_pagecache_range(inode, offset, offset + size - 1);
 		offset += size;
 		length -= size;
