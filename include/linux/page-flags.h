@@ -110,9 +110,6 @@ enum pageflags {
 	PG_young,
 	PG_idle,
 #endif
-#ifdef CONFIG_ZCACHE
-	PG_was_active,
-#endif
 	__NR_PAGEFLAGS,
 
 	/* Filesystems */
@@ -291,12 +288,6 @@ PAGEFLAG(Reserved, reserved, PF_NO_COMPOUND)
 PAGEFLAG(SwapBacked, swapbacked, PF_NO_TAIL)
 	__CLEARPAGEFLAG(SwapBacked, swapbacked, PF_NO_TAIL)
 	__SETPAGEFLAG(SwapBacked, swapbacked, PF_NO_TAIL)
-
-#ifdef CONFIG_ZCACHE
-PAGEFLAG(WasActive, was_active, PF_ANY)
-#else
-PAGEFLAG_FALSE(WasActive)
-#endif
 
 /*
  * Private page markings that may be used by the filesystem that owns the page
