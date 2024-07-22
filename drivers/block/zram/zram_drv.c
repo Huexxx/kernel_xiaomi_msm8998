@@ -2129,10 +2129,12 @@ static void zram_slot_free_notify(struct block_device *bdev,
 static int zram_rw_page(struct block_device *bdev, sector_t sector,
 		       struct page *page, unsigned int op)
 {
+	unsigned long start_time = jiffies;
+	int rw_acct = op_is_write(op) ? REQ_OP_WRITE : REQ_OP_READ;
 	int offset, ret;
 	u32 index;
 	struct zram *zram;
-	struct bio_vec bv;
+	struct bio_vec *bvec;
 
 	zram = bdev->bd_disk->private_data;
 
@@ -2145,11 +2147,33 @@ static int zram_rw_page(struct block_device *bdev, sector_t sector,
 	index = sector >> SECTORS_PER_PAGE_SHIFT;
 	offset = (sector & (SECTORS_PER_PAGE - 1)) << SECTOR_SHIFT;
 
-	bv.bv_page = page;
-	bv.bv_len = PAGE_SIZE;
-	bv.bv_offset = 0;
+	bvec->bv_page = page;
+	bvec->bv_len = PAGE_SIZE;
+	bvec->bv_offset = 0;
 
-	ret = zram_bvec_rw(zram, &bv, index, offset, op, NULL);
+	generic_start_io_acct(rw_acct, bvec->bv_len >> SECTOR_SHIFT,
+			&zram->disk->part0);
+
+	if (!op_is_write(op)) {
+		ret = zram_bvec_read(zram, bvec, index, offset, NULL);
+		flush_dcache_page(bvec->bv_page);
+	} else {
+		ret = zram_bvec_write(zram, bvec, index, offset, NULL);
+	}
+
+	generic_end_io_acct(rw_acct, &zram->disk->part0, start_time);
+
+	zram_slot_lock(zram, index);
+	zram_accessed(zram, index);
+	zram_slot_unlock(zram, index);
+
+	if (unlikely(ret < 0)) {
+		if (!op_is_write(op))
+			atomic64_inc(&zram->stats.failed_reads);
+		else
+			atomic64_inc(&zram->stats.failed_writes);
+	}
+
 out:
 	/*
 	 * If I/O fails, just return error(ie, non-zero) without
