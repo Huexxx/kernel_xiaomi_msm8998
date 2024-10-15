@@ -593,6 +593,7 @@ struct sk_msg_buff {
 	bool sg_copy[MAX_SKB_FRAGS];
 	__u32 flags;
 	struct sock *sk_redir;
+	struct sock *sk;
 };
 
 /* Compute the linear packet data range [data, data_end) which
