@@ -1712,7 +1712,7 @@ static void *sock_map_lookup(struct bpf_map *map, void *key)
 	sk = __sock_map_lookup_elem(map, *(u32 *)key);
 	if (!sk || !sk_fullsock(sk))
 		return NULL;
-	if (sk_is_refcounted(sk) && !refcount_inc_not_zero(&sk->sk_refcnt))
+	if (sk_is_refcounted(sk) && !atomic_inc_not_zero(&sk->sk_refcnt))
 		return NULL;
 	return sk;
 }
