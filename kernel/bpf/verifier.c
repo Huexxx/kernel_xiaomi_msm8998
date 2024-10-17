@@ -995,7 +995,8 @@ static int check_ptr_alignment(struct bpf_verifier_env *env,
 		pointer_desc = "stack ";
 		break;
 	default:
-		break;	}
+		break;
+	}
 	return check_generic_ptr_alignment(reg, pointer_desc, off, size, strict);
 }
 
