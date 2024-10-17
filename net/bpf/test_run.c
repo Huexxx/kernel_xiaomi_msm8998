@@ -10,7 +10,6 @@
 #include <linux/etherdevice.h>
 #include <linux/filter.h>
 #include <linux/sched.h>
-#include <net/bpf_sk_storage.h>
 
 static __always_inline u32 bpf_test_run_one(struct bpf_prog *prog, void *ctx)
 {
@@ -143,7 +142,6 @@ int bpf_prog_test_run_skb(struct bpf_prog *prog, const union bpf_attr *kattr,
 		size = skb_headlen(skb);
 	ret = bpf_test_finish(uattr, skb->data, size, retval, duration);
 	kfree_skb(skb);
-	bpf_sk_storage_free(sk);
 	return ret;
 }
 
