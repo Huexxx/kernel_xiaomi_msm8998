@@ -5166,7 +5166,7 @@ static int check_btf_func(struct bpf_verifier_env *env,
 	urecord = u64_to_user_ptr(attr->func_info);
 	min_size = min_t(u32, krec_size, urec_size);
 
-	krecord = kvcalloc(nfuncs, krec_size, GFP_KERNEL | __GFP_NOWARN);
+	krecord = kcalloc(nfuncs, krec_size, GFP_KERNEL | __GFP_NOWARN);
 	if (!krecord)
 		return -ENOMEM;
 
@@ -5230,7 +5230,7 @@ static int check_btf_func(struct bpf_verifier_env *env,
 	return 0;
 
 err_free:
-	kvfree(krecord);
+	kfree(krecord);
 	return ret;
 }
 
