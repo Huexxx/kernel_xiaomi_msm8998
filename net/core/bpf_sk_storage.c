@@ -846,7 +846,7 @@ BPF_CALL_4(bpf_sk_storage_get, struct bpf_map *, map, struct sock *, sk,
 	     * (and also other memory issues during map
 	     *  destruction).
 	     */
-	    refcount_inc_not_zero(&sk->sk_refcnt)) {
+	    atomic_inc_not_zero(&sk->sk_refcnt)) {
 		sdata = sk_storage_update(sk, map, value, BPF_NOEXIST);
 		/* sk must be a fullsock (guaranteed by verifier),
 		 * so sock_gen_put() is unnecessary.
@@ -861,7 +861,7 @@ BPF_CALL_4(bpf_sk_storage_get, struct bpf_map *, map, struct sock *, sk,
 
 BPF_CALL_2(bpf_sk_storage_delete, struct bpf_map *, map, struct sock *, sk)
 {
-	if (refcount_inc_not_zero(&sk->sk_refcnt)) {
+	if (atomic_inc_not_zero(&sk->sk_refcnt)) {
 		int err;
 
 		err = sk_storage_delete(sk, map);
