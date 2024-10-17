@@ -5274,7 +5274,7 @@ static int check_btf_line(struct bpf_verifier_env *env,
 	/* Need to zero it in case the userspace may
 	 * pass in a smaller bpf_line_info object.
 	 */
-	linfo = kvcalloc(nr_linfo, sizeof(struct bpf_line_info),
+	linfo = kcalloc(nr_linfo, sizeof(struct bpf_line_info),
 			 GFP_KERNEL | __GFP_NOWARN);
 	if (!linfo)
 		return -ENOMEM;
@@ -5359,7 +5359,7 @@ static int check_btf_line(struct bpf_verifier_env *env,
 	return 0;
 
 err_free:
-	kvfree(linfo);
+	kfree(linfo);
 	return err;
 }
 
