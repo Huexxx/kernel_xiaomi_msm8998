@@ -491,7 +491,7 @@ static const char *__btf_name_by_offset(const struct btf *btf, u32 offset)
 		return "(invalid-name-offset)";
 }
 
-static const char *btf_name_by_offset(const struct btf *btf, u32 offset)
+const char *btf_name_by_offset(const struct btf *btf, u32 offset)
 {
 	if (offset < btf->hdr.str_len)
 		return &btf->strings[offset];
